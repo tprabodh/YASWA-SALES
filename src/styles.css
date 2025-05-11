@@ -17,6 +17,8 @@ body {
     padding: 2rem;
     width: 100%;
     max-width: 400px;
+    max-height: 90vh;
+    overflow-y: auto;
     box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
   }
   
@@ -161,6 +163,7 @@ body {
   .form-group {
     display: flex;
     flex-direction: column;
+    margin-bottom: 15px;
   }
   
   /* Label for inputs */
@@ -168,16 +171,19 @@ body {
     font-size: 0.875rem;
     font-weight: 500;
     color: #4a4a4a;
-    margin-bottom: 0.5rem;
+    display: block;
+    margin-bottom: 5px;
   }
   
   /* Input fields */
   .form-input {
-    padding: 0.75rem;
     border: 1px solid #d1d5db;
     border-radius: 4px;
     font-size: 1rem;
     transition: border-color 0.3s, box-shadow 0.3s;
+    width: 100%;
+    padding: 8px;
+    box-sizing: border-box;
   }
   
   .form-input:focus {
@@ -344,3 +350,8 @@ body {
     background-color: #f1f1f1;
   }
   
+  .form-select {
+    width: 100%;
+    padding: 8px;
+    box-sizing: border-box;
+  }
