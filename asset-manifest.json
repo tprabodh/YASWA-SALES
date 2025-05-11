@@ -1,15 +1,15 @@
 {
   "files": {
     "main.css": "/YASWA-SALES/static/css/main.641af195.css",
-    "main.js": "/YASWA-SALES/static/js/main.4370047c.js",
+    "main.js": "/YASWA-SALES/static/js/main.df8c37e5.js",
     "static/js/453.3df219f2.chunk.js": "/YASWA-SALES/static/js/453.3df219f2.chunk.js",
     "index.html": "/YASWA-SALES/index.html",
     "main.641af195.css.map": "/YASWA-SALES/static/css/main.641af195.css.map",
-    "main.4370047c.js.map": "/YASWA-SALES/static/js/main.4370047c.js.map",
+    "main.df8c37e5.js.map": "/YASWA-SALES/static/js/main.df8c37e5.js.map",
     "453.3df219f2.chunk.js.map": "/YASWA-SALES/static/js/453.3df219f2.chunk.js.map"
   },
   "entrypoints": [
     "static/css/main.641af195.css",
-    "static/js/main.4370047c.js"
+    "static/js/main.df8c37e5.js"
   ]
 }
