@@ -4,6 +4,8 @@ import './styles.css';
 import App from './App';
 import reportWebVitals from './reportWebVitals';
 import Modal from 'react-modal';
+import { BrowserRouter } from 'react-router-dom';
+
 
 Modal.setAppElement('#root');
 
@@ -12,7 +14,9 @@ const container = document.getElementById('root');
 const root = createRoot(container);
 root.render(
   <React.StrictMode>
-    <App />
+     <BrowserRouter basename="/YASWA-SALES">
+      <App />
+    </BrowserRouter>
   </React.StrictMode>
 );
 
