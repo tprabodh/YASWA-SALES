@@ -10,64 +10,87 @@ export default function ManagerViewPage() {
   const [reports, setReports] = useState([]);
   const navigate = useNavigate();
 
-
   useEffect(() => {
     if (loading || !profile) return;
-    console.log('Manager companyId:', profile.companyId);
 
-  
     const fetchReports = async () => {
       try {
         const reportsRef = collection(db, 'reports');
-        const q = query(reportsRef, where('managerId', '==', profile.companyId));
-        const querySnapshot = await getDocs(q);
-        const reportsData = querySnapshot.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data(),
-        }));
-        setReports(reportsData);
-      } catch (error) {
-        console.error('Error fetching reports:', error);
+        const q = query(
+          reportsRef,
+          where('managerId', '==', profile.companyId)
+        );
+        const snap = await getDocs(q);
+        setReports(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+      } catch (err) {
+        console.error(err);
       }
     };
-  
     fetchReports();
   }, [loading, profile]);
-  
 
-  if (loading) return <div>Loading...</div>;
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <p className="text-gray-500">Loading…</p>
+      </div>
+    );
+  }
 
   return (
-    <div>
-      <h2>Reports Managed by You</h2>
-      {reports.length === 0 ? (
-        <p>No reports found.</p>
-      ) : (
-        <table className="reports-table">
-          <thead>
-            <tr>
-              <th>Student Name</th>
-              <th>Course</th>
-              <th>Status</th>
-              <th>View</th>
-            </tr>
-          </thead>
-          <tbody>
-            {reports.map(report => (
-              <tr key={report.id}>
-                <td>{report.studentName}</td>
-                <td>{report.course}</td>
-                <td>{report.status}</td>
-                <td>
-                  <button onClick={() => navigate(`/view/${report.id}`)}>
-                    View
-                  </button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      )}
+    <div className="min-h-screen bg-gray-100 p-6">
+      <div className="max-w-4xl mx-auto">
+        <h2 className="text-2xl font-bold text-gray-800 mb-4">
+          Reports Managed by You
+        </h2>
+
+        {reports.length === 0 ? (
+          <p className="text-gray-600">No reports found.</p>
+        ) : (
+          <div className="overflow-x-auto bg-white rounded-lg shadow">
+            <table className="min-w-full divide-y divide-gray-200">
+              <thead className="bg-gray-50">
+                <tr>
+                  {['Student', 'Course', 'Status', 'View'].map((hdr) => (
+                    <th
+                      key={hdr}
+                      className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wide"
+                    >
+                      {hdr}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-100">
+                {reports.map((r, i) => (
+                  <tr
+                    key={r.id}
+                    className={i % 2 === 0 ? 'bg-white' : 'bg-gray-50'}
+                  >
+                    <td className="px-6 py-4 whitespace-nowrap text-gray-800">
+                      {r.studentName}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-gray-800">
+                      {r.course}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-gray-800">
+                      {r.status}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <button
+                        onClick={() => navigate(`/view/${r.id}`, { state: { from: 'manager' } })}
+                        className="px-3 py-1 bg-[#8a1ccf] text-white rounded hover:bg-[#7a1bbf] transition text-sm"
+                      >
+                        View
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
     </div>
   );
 }

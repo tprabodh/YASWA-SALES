@@ -5,11 +5,14 @@ import {
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
 } from 'firebase/auth';
+import { Link } from 'react-router-dom';
+
 import {
   doc,
   setDoc,
   serverTimestamp,
 } from 'firebase/firestore';
+
 
 function generateId(designation, associatedWith, teachingSubject, state) {
   const designationMap = {
@@ -186,161 +189,204 @@ export default function LoginPage() {
   ];
 
   return (
-    <div className="login-container">
-      <h1>{isNew ? 'Sign Up' : 'Sign In'}</h1>
+    <div className="min-h-screen bg-gradient-to-br from-[#8a1ccf]/80 to-[#8a1ccf]/60 flex items-center justify-center px-4">
+      <div className="w-full max-w-lg bg-white rounded-2xl shadow-xl p-8 space-y-6">
+        <h1 className="text-3xl font-bold text-center text-[#8a1ccf]">
+          {isNew ? 'Sign Up' : 'Sign In'}
+        </h1>
 
-      {error && <div className="error-message">{error}</div>}
-
-      <form onSubmit={handleSubmit}>
-        {isNew && (
-          <>
-            <label>Name</label>
-            <input
-              type="text"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              required
-            />
-
-            <label>Mobile Number</label>
-            <input
-              type="tel"
-              value={mobileNumber}
-              onChange={(e) => setMobileNumber(e.target.value)}
-              required
-            />
-
-            <label>WhatsApp Number</label>
-            <input
-              type="tel"
-              value={whatsappNumber}
-              onChange={(e) => setWhatsappNumber(e.target.value)}
-              required
-            />
-
-            <label>Aadhar Number</label>
-            <input
-              type="text"
-              value={aadharNumber}
-              onChange={(e) => setAadharNumber(e.target.value)}
-              required
-            />
-
-            <label>Bank Account Number</label>
-            <input
-              type="text"
-              value={bankAccountNumber}
-              onChange={(e) => setBankAccountNumber(e.target.value)}
-              required
-            />
-
-            <label>IFSC Code</label>
-            <input
-              type="text"
-              value={ifscCode}
-              onChange={(e) => setIfscCode(e.target.value)}
-              required
-            />
-
-            <label>Current Designation</label>
-            <select
-              value={designation}
-              onChange={(e) => setDesignation(e.target.value)}
-              required
-            >
-              <option value="">Select</option>
-              <option value="Lecturer/Professor/Teaching Staff">Lecturer/Professor/Teaching Staff</option>
-              <option value="Administrative/Admissions Staff">Administrative/Admissions Staff</option>
-              <option value="Non Educational Industry">Non Educational Industry</option>
-            </select>
-
-            <label>Associated With</label>
-            <select
-              value={associatedWith}
-              onChange={(e) => setAssociatedWith(e.target.value)}
-              required
-            >
-              <option value="">Select</option>
-              <option value="PU">PU</option>
-              <option value="School">School</option>
-              <option value="Non Educational">Non Educational</option>
-            </select>
-
-            <label>Teaching Subject</label>
-            <select
-              value={teachingSubject}
-              onChange={(e) => setTeachingSubject(e.target.value)}
-              required
-            >
-              <option value="">Select</option>
-              <option value="Physics">Physics</option>
-              <option value="Maths">Maths</option>
-              <option value="Biology">Biology</option>
-              <option value="Chemistry">Chemistry</option>
-              <option value="Others">Others</option>
-
-            </select>
-
-            <label>Residing State</label>
-            <select
-              value={residingState}
-              onChange={(e) => setResidingState(e.target.value)}
-              required
-            >
-              <option value="">Select</option>
-              {statesOfIndia.map((state) => (
-                <option key={state} value={state}>
-                  {state}
-                </option>
-              ))}
-            </select>
-          </>
+        {error && (
+          <div className="bg-red-100 text-red-700 p-2 rounded text-sm">
+            {error}
+          </div>
         )}
 
-        <label>Email</label>
-        <input
-          type="email"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          required
-        />
+        <form onSubmit={handleSubmit} className="space-y-4">
+          {isNew && (
+            <>
+              <div>
+                <label className="block text-gray-700">Name</label>
+                <input
+                  type="text"
+                  value={name}
+                  onChange={e => setName(e.target.value)}
+                  className="mt-1 w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-[#8a1ccf]"
+                />
+              </div>
 
-        <label>Password</label>
-        <input
-          type="password"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          required
-        />
+              <div>
+                <label className="block text-gray-700">Mobile Number</label>
+                <input
+                  type="tel"
+                  value={mobileNumber}
+                  onChange={e => setMobileNumber(e.target.value)}
+                  className="mt-1 w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-[#8a1ccf]"
+                />
+              </div>
 
-        {isNew && (
-          <>
-            <label>Confirm Password</label>
+              <div>
+                <label className="block text-gray-700">WhatsApp Number</label>
+                <input
+                  type="tel"
+                  value={whatsappNumber}
+                  onChange={e => setWhatsappNumber(e.target.value)}
+                  className="mt-1 w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-[#8a1ccf]"
+                />
+              </div>
+
+              <div>
+                <label className="block text-gray-700">Aadhar Number</label>
+                <input
+                  type="text"
+                  value={aadharNumber}
+                  onChange={e => setAadharNumber(e.target.value)}
+                  className="mt-1 w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-[#8a1ccf]"
+                />
+              </div>
+
+              <div>
+                <label className="block text-gray-700">Bank Account Number</label>
+                <input
+                  type="text"
+                  value={bankAccountNumber}
+                  onChange={e => setBankAccountNumber(e.target.value)}
+                  className="mt-1 w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-[#8a1ccf]"
+                />
+              </div>
+
+              <div>
+                <label className="block text-gray-700">IFSC Code</label>
+                <input
+                  type="text"
+                  value={ifscCode}
+                  onChange={e => setIfscCode(e.target.value)}
+                  className="mt-1 w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-[#8a1ccf]"
+                />
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-gray-700">Designation</label>
+                  <select
+                    value={designation}
+                    onChange={e => setDesignation(e.target.value)}
+                    className="mt-1 w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-[#8a1ccf]"
+                  >
+                    <option value="">Select</option>
+                    <option>Lecturer/Professor/Teaching Staff</option>
+                    <option>Administrative/Admissions Staff</option>
+                    <option>Non Educational Industry</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-gray-700">Associated With</label>
+                  <select
+                    value={associatedWith}
+                    onChange={e => setAssociatedWith(e.target.value)}
+                    className="mt-1 w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-[#8a1ccf]"
+                  >
+                    <option value="">Select</option>
+                    <option>PU</option>
+                    <option>School</option>
+                    <option>Non Educational</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-gray-700">Teaching Subject</label>
+                  <select
+                    value={teachingSubject}
+                    onChange={e => setTeachingSubject(e.target.value)}
+                    className="mt-1 w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-[#8a1ccf]"
+                  >
+                    <option value="">Select</option>
+                    <option>Physics</option>
+                    <option>Maths</option>
+                    <option>Biology</option>
+                    <option>Chemistry</option>
+                    <option>Others</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-gray-700">Residing State</label>
+                  <select
+                    value={residingState}
+                    onChange={e => setResidingState(e.target.value)}
+                    className="mt-1 w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-[#8a1ccf]"
+                  >
+                    <option value="">Select</option>
+                    {statesOfIndia.map((s) => (
+                      <option key={s}>{s}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+            </>
+          )}
+
+          <div>
+            <label className="block text-gray-700">Email</label>
+            <input
+              type="email"
+              value={email}
+              onChange={e => setEmail(e.target.value)}
+              className="mt-1 w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-[#8a1ccf]"
+              required
+            />
+          </div>
+
+          <div>
+            <label className="block text-gray-700">Password</label>
             <input
               type="password"
-              value={confirm}
-              onChange={(e) => setConfirm(e.target.value)}
+              value={password}
+              onChange={e => setPassword(e.target.value)}
+              className="mt-1 w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-[#8a1ccf]"
               required
             />
-          </>
-        )}
+          </div>
 
-        <button type="submit">
-          {isNew ? 'Register' : 'Login'}
-        </button>
-      </form>
+          <p className="text-right text-sm">
+            <Link to="/forgot-password" className="text-[#8a1ccf] hover:underline">
+              Forgot Password?
+            </Link>
+          </p>
 
-      <button
-        className="toggle-button"
-        onClick={() => {
-          resetForm();
-          setIsNew(!isNew);
-        }}
-      >
-        {isNew
-          ? 'Already have an account? Sign In'
-          : 'New user? Create an account'}
-      </button>
+          {isNew && (
+            <div>
+              <label className="block text-gray-700">Confirm Password</label>
+              <input
+                type="password"
+                value={confirm}
+                onChange={e => setConfirm(e.target.value)}
+                className="mt-1 w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-[#8a1ccf]}"
+                required
+              />
+            </div>
+          )}
+
+          <button
+            type="submit"
+            className="w-full mt-4 bg-[#8a1ccf] text-white py-3 rounded-lg shadow hover:bg-[#7a1bbf] transition"
+          >
+            {isNew ? 'Register' : 'Login'}
+          </button>
+        </form>
+
+        <p className="mt-4 text-center text-sm">
+          {isNew
+            ? 'Already have an account? '
+            : "New user? "}
+          <button
+            onClick={() => {
+              resetForm();
+              setIsNew(!isNew);
+            }}
+            className="text-[#8a1ccf] font-medium hover:underline"
+          >
+            {isNew ? 'Sign In' : 'Create one'}
+          </button>
+        </p>
+      </div>
     </div>
   );
 }

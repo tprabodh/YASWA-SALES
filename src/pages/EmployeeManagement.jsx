@@ -6,6 +6,7 @@ import EmployeeDetailsModal from '../Components/EmployeeDetailsModal';
 import AssignSubordinatesModal from '../Components/AssignSubordinatesModal';
 import Modal from 'react-modal';
 
+
 Modal.setAppElement('#root'); // Set the root element for accessibility
 
 const EmployeeManagement = () => {
@@ -83,6 +84,12 @@ const EmployeeManagement = () => {
   };
 
   const promoteToManager = async (companyId) => {
+    const employee = employees.find((emp) => emp.id === companyId);
+    if (employee?.supervisorId) {
+      alert('Please disengage this employee from their current manager before promoting.');
+      return;
+    }
+  
     const employeeRef = doc(db, 'users', companyId);
     await updateDoc(employeeRef, { role: 'manager', supervisorId: null });
     setEmployees((prev) =>
@@ -166,49 +173,82 @@ const EmployeeManagement = () => {
 
   return (
     <div>
-      <h2>Employee Management</h2>
-      <SearchBar query={query} setQuery={setQuery} />
-      <table>
-        <thead>
-          <tr>
-            <th>Name</th>
-            <th>Email</th>
-            <th>Role</th>
-            <th>Supervisor</th>
-            <th>Actions</th>
-          </tr>
-        </thead>
-        <tbody>
-        {filteredEmployees.map((emp) => (
-  <tr key={emp.id}>
-    <td>{emp.name}</td>
-    <td>{emp.email}</td>
-    <td>{emp.role}</td>
-    <td>
-      {emp.supervisorId
-        ? employees.find((e) => e.companyId === emp.supervisorId)?.name || 'N/A'
-        : 'None'}
-    </td>
-    <td>
-      <button onClick={() => openDetailsModal(emp)}>View</button>
-      {emp.role === 'employee' && (
-        <button onClick={() => promoteToManager(emp.id)}>Promote to Manager</button>
-      )}
-      {emp.role === 'manager' && (
-        <>
-          <button onClick={() => demoteToEmployee(emp.id)}>Demote to Employee</button>
-          <button onClick={() => openAssignModal(emp)}>Assign Subordinates</button>
-        </>
-      )}
-      {emp.supervisorId && (
-        <button onClick={() => disengageEmployee(emp)}>Disengage</button>
-      )}
-    </td>
-  </tr>
-))}
+      <br />
+      <h2 className="text-2xl font-bold text-white-800 mb-4">Employee Management</h2>
+      <br />
+<SearchBar query={query} setQuery={setQuery} className="mb-6" />
+<br />
 
-        </tbody>
-      </table>
+      <div className="overflow-x-auto bg-white rounded-lg shadow">
+  <table className="min-w-full divide-y divide-gray-200">
+    <thead className="bg-gray-50">
+      <tr>
+        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
+        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Role</th>
+        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Company ID</th>
+        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Supervisor</th>
+        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+      </tr>
+    </thead>
+    <tbody className="bg-white divide-y divide-gray-200">
+      {filteredEmployees.map((emp) => (
+        <tr key={emp.id}>
+          <td className="px-6 py-4 whitespace-nowrap text-sm text-black">{emp.name}</td>
+<td className="px-6 py-4 whitespace-nowrap text-sm text-black">
+  {emp.role.charAt(0).toUpperCase() + emp.role.slice(1)}
+</td>
+<td className="px-6 py-4 whitespace-nowrap text-sm text-black">{emp.companyId || 'N/A'}</td>
+<td className="px-6 py-4 whitespace-nowrap text-sm text-black">
+  {emp.supervisorId
+    ? employees.find((e) => e.companyId === emp.supervisorId)?.name || 'N/A'
+    : 'None'}
+</td>
+          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 space-x-2">
+            <button
+              className="px-3 py-1 bg-blue-500 text-white rounded hover:bg-blue-600"
+              onClick={() => openDetailsModal(emp)}
+            >
+              View
+            </button>
+            {emp.role === 'employee' && (
+              <button
+                className="px-3 py-1 bg-green-500 text-white rounded hover:bg-green-600"
+                onClick={() => promoteToManager(emp.id)}
+              >
+                Promote
+              </button>
+            )}
+            {emp.role === 'manager' && (
+              <>
+                <button
+                  className="px-3 py-1 bg-yellow-500 text-white rounded hover:bg-yellow-600"
+                  onClick={() => demoteToEmployee(emp.id)}
+                >
+                  Demote
+                </button>
+                <button
+                  className="px-3 py-1 bg-indigo-500 text-white rounded hover:bg-indigo-600"
+                  onClick={() => openAssignModal(emp)}
+                >
+                  Assign
+                </button>
+              </>
+            )}
+            {emp.supervisorId && (
+              <button
+                className="px-3 py-1 bg-red-500 text-white rounded hover:bg-red-600"
+                onClick={() => disengageEmployee(emp)}
+              >
+                Disengage
+              </button>
+            )}
+          </td>
+        </tr>
+      ))}
+    </tbody>
+  </table>
+</div>
+
       <EmployeeDetailsModal
   isOpen={isDetailsModalOpen}
   onRequestClose={closeDetailsModal}

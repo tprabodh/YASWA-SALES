@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { db } from '../firebase';
 import {
@@ -9,186 +9,211 @@ import {
   updateDoc,
   serverTimestamp,
 } from 'firebase/firestore';
-import { useAuth } from '../hooks/UseAuth';
+import useAuth from '../hooks/UseAuth';
+import { useForm } from 'react-hook-form';
+import { ToastContainer, toast } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
 
 export default function ReportFormPage() {
-  const { id } = useParams(); // for edit mode
+  const { id } = useParams();
   const isEditing = Boolean(id);
   const navigate = useNavigate();
-  const user = useAuth();
+  const { user, loading } = useAuth();
+  const [loadingSubmit, setLoadingSubmit] = useState(false);
 
-  // form fields
-  const [studentName, setStudentName] = useState('');
-  const [studentPhone, setStudentPhone] = useState('');
-  const [studentEmail, setStudentEmail] = useState('');
-  const [grade, setGrade] = useState('');
-  const [course, setCourse] = useState('');
-  const [price, setPrice] = useState('');
-  const [transactionId, setTransactionId] = useState('');
-  const [loading, setLoading] = useState(false);
-  
+  const {
+    register,
+    handleSubmit,
+    setValue,
+    formState: { errors },
+  } = useForm();
 
-
-  // if editing, load existing data
   useEffect(() => {
-    if (!isEditing) return;
-    const docRef = doc(db, 'reports', id);
-    getDoc(docRef).then(docSnap => {
-      if (docSnap.exists()) {
-        const data = docSnap.data();
-        setStudentName(data.studentName);
-        setStudentPhone(data.studentPhone);
-        setStudentEmail(data.studentEmail);
-        setGrade(data.grade);
-        setCourse(data.course);
-        setPrice(data.price);
-        setTransactionId(data.transactionId);
+    if (!isEditing || loading || !user) return;
+    const fetchReport = async () => {
+      try {
+        const docRef = doc(db, 'reports', id);
+        const docSnap = await getDoc(docRef);
+        if (docSnap.exists()) {
+          const data = docSnap.data();
+          setValue('studentName', data.studentName);
+          setValue('studentPhone', data.studentPhone);
+          setValue('studentEmail', data.studentEmail);
+          setValue('grade', data.grade);
+          setValue('course', data.course);
+          setValue('whatsappNumber', data.whatsappNumber);
+        }
+      } catch (error) {
+        toast.error('Failed to load report data.');
       }
-    });
-  }, [id, isEditing]);
+    };
+    fetchReport();
+  }, [id, isEditing, setValue, loading, user]);
 
-  const handleSubmit = async e => {
-    e.preventDefault();
-    if (!user) return alert('Log in first');
-    setLoading(true);
-  
+  const onSubmit = async (formData) => {
+    if (loading || !user) {
+      toast.error('Please log in first.');
+      return;
+    }
+    setLoadingSubmit(true);
+
     try {
-      // Fetch the current user's document
       const userDocRef = doc(db, 'users', user.uid);
       const userDocSnap = await getDoc(userDocRef);
-  
+
       if (!userDocSnap.exists()) {
         throw new Error('User profile not found');
       }
-  
+
       const userData = userDocSnap.data();
       const managerId = userData.supervisorId;
-  
+      const companyId = userData.companyId;
+
       const payload = {
-        studentName,
-        studentPhone,
-        studentEmail,
-        grade,
-        course,
-        price,
-        transactionId,
+        ...formData,
         userId: user.uid,
         managerId,
+        companyId,
         status: 'pending',
         updatedAt: serverTimestamp(),
         ...(isEditing ? {} : { createdAt: serverTimestamp() }),
       };
-  
+
       if (isEditing) {
         const docRef = doc(db, 'reports', id);
         await updateDoc(docRef, payload);
-        alert('Report updated');
+        toast.success('Report updated successfully');
       } else {
         await addDoc(collection(db, 'reports'), payload);
-        alert('Report submitted');
+        toast.success('Report submitted successfully');
       }
       navigate('/reports');
     } catch (err) {
       console.error(err);
-      alert('Error: ' + err.message);
+      toast.error(`Error: ${err.message}`);
     } finally {
-      setLoading(false);
+      setLoadingSubmit(false);
     }
   };
-  
-  
+
+  if (loading) {
+    return <div>Loading...</div>;
+  }
 
   return (
-    <div className="form-container">
-      <h2 className="form-title">
-        {isEditing ? 'Edit Report' : 'New Report'}
-      </h2>
-      <form onSubmit={handleSubmit} className="form">
-        <label className="form-group">
-          <span className="form-label">Student Name</span>
-          <input
-            type="text"
-            value={studentName}
-            onChange={e => setStudentName(e.target.value)}
-            required
-            className="form-input"
-          />
-        </label>
+    <div className="min-h-screen bg-gray-100 flex items-center justify-center px-4 py-10">
+      <div className="w-full max-w-md bg-white rounded-xl shadow-lg p-6 sm:p-8">
+        <h1 className="text-xl sm:text-2xl font-semibold text-center text-[#8a1ccf] mb-6">
+          {isEditing ? 'Edit Report' : 'New Report'}
+        </h1>
 
-        <label className="form-group">
-          <span className="form-label">Phone Number</span>
-          <input
-            type="tel"
-            value={studentPhone}
-            onChange={e => setStudentPhone(e.target.value)}
-            required
-            className="form-input"
-          />
-        </label>
+        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium mb-1">Student Name</label>
+            <input
+              type="text"
+              {...register('studentName', { required: 'Student name is required' })}
+              className="w-full px-4 py-2 border rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-[#8a1ccf]"
+            />
+            {errors.studentName && (
+              <p className="text-red-500 text-xs mt-1">{errors.studentName.message}</p>
+            )}
+          </div>
 
-        <label className="form-group">
-          <span className="form-label">Email ID</span>
-          <input
-            type="email"
-            value={studentEmail}
-            onChange={e => setStudentEmail(e.target.value)}
-            required
-            className="form-input"
-          />
-        </label>
+          <div>
+            <label className="block text-sm font-medium mb-1">Student Mobile Number</label>
+            <input
+              type="tel"
+              {...register('studentPhone', {
+                required: 'Mobile number is required',
+                pattern: {
+                  value: /^[0-9]{10}$/,
+                  message: 'Enter a valid 10-digit mobile number',
+                },
+              })}
+              className="w-full px-4 py-2 border rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-[#8a1ccf]"
+            />
+            {errors.studentPhone && (
+              <p className="text-red-500 text-xs mt-1">{errors.studentPhone.message}</p>
+            )}
+          </div>
 
-        <label className="form-group">
-          <span className="form-label">Grade</span>
-          <input
-            type="text"
-            value={grade}
-            onChange={e => setGrade(e.target.value)}
-            required
-            className="form-input"
-          />
-        </label>
+          <div>
+            <label className="block text-sm font-medium mb-1">Student Whatsapp Number</label>
+            <input
+              type="tel"
+              {...register('whatsappNumber', {
+                required: 'Whatsapp number is required',
+                pattern: {
+                  value: /^[0-9]{10}$/,
+                  message: 'Enter a valid 10-digit Whatsapp number',
+                },
+              })}
+              className="w-full px-4 py-2 border rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-[#8a1ccf]"
+            />
+            {errors.whatsappNumber && (
+              <p className="text-red-500 text-xs mt-1">{errors.whatsappNumber.message}</p>
+            )}
+          </div>
 
-        <label className="form-group">
-          <span className="form-label">Course</span>
-          <input
-            type="text"
-            value={course}
-            onChange={e => setCourse(e.target.value)}
-            required
-            className="form-input"
-          />
-        </label>
+          <div>
+            <label className="block text-sm font-medium mb-1">Student Email ID</label>
+            <input
+              type="email"
+              {...register('studentEmail', {
+                required: 'Email is required',
+                pattern: {
+                  value: /^\S+@\S+$/i,
+                  message: 'Enter a valid email address',
+                },
+              })}
+              className="w-full px-4 py-2 border rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-[#8a1ccf]"
+            />
+            {errors.studentEmail && (
+              <p className="text-red-500 text-xs mt-1">{errors.studentEmail.message}</p>
+            )}
+          </div>
 
-        <label className="form-group">
-          <span className="form-label">Price</span>
-          <input
-            type="number"
-            value={price}
-            onChange={e => setPrice(e.target.value)}
-            required
-            className="form-input"
-          />
-        </label>
+          <div>
+            <label className="block text-sm font-medium mb-1">Student Grade</label>
+            <select
+              {...register('grade', { required: 'Grade selection is required' })}
+              className="w-full px-4 py-2 border rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-[#8a1ccf]"
+            >
+              <option value="">Select</option>
+              <option value="PU1">11th/PU1/Intermediate 1st year</option>
+              <option value="PU2">12th/PU2/Intermediate 2nd year</option>
+            </select>
+            {errors.grade && (
+              <p className="text-red-500 text-xs mt-1">{errors.grade.message}</p>
+            )}
+          </div>
 
-        <label className="form-group">
-          <span className="form-label">Reference / Transaction ID</span>
-          <input
-            type="text"
-            value={transactionId}
-            onChange={e => setTransactionId(e.target.value)}
-            required
-            className="form-input"
-          />
-        </label>
-
-        <button
-          type="submit"
-          disabled={loading}
-          className="form-button"
-        >
-          {loading ? 'Saving…' : isEditing ? 'Update Report' : 'Submit Report'}
-        </button>
-      </form>
+          <div>
+            <label className="block text-sm font-medium mb-1">Course Purchased</label>
+            <select
+              {...register('course', { required: 'Course selection is required' })}
+              className="w-full px-4 py-2 border rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-[#8a1ccf]"
+            >
+              <option value="">Select</option>
+              <option value="JEE MAINS">JEE MAINS</option>
+              <option value="NEET UG">NEET UG</option>
+            </select>
+            {errors.course && (
+              <p className="text-red-500 text-xs mt-1">{errors.course.message}</p>
+            )}
+          </div>
+<br />
+          <button
+            type="submit"
+            disabled={loading}
+            className="w-full py-2 bg-purple-500 text-white rounded-md mb-6 rounded hover:bg-indigo-800"
+            >
+            {loading ? 'Saving…' : isEditing ? 'Update Report' : 'Submit Report'}
+          </button>
+        </form>
+      </div>
+      <ToastContainer position="top-center" autoClose={3000} />
     </div>
   );
 }
