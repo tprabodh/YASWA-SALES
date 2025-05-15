@@ -1,15 +1,16 @@
 {
   "files": {
-    "main.css": "/YASWA-SALES/static/css/main.641af195.css",
-    "main.js": "/YASWA-SALES/static/js/main.df8c37e5.js",
+    "main.css": "/YASWA-SALES/static/css/main.db5a903b.css",
+    "main.js": "/YASWA-SALES/static/js/main.34f6c473.js",
     "static/js/453.3df219f2.chunk.js": "/YASWA-SALES/static/js/453.3df219f2.chunk.js",
+    "static/media/logo.png": "/YASWA-SALES/static/media/logo.d878d7fca8f80928705c.png",
     "index.html": "/YASWA-SALES/index.html",
-    "main.641af195.css.map": "/YASWA-SALES/static/css/main.641af195.css.map",
-    "main.df8c37e5.js.map": "/YASWA-SALES/static/js/main.df8c37e5.js.map",
+    "main.db5a903b.css.map": "/YASWA-SALES/static/css/main.db5a903b.css.map",
+    "main.34f6c473.js.map": "/YASWA-SALES/static/js/main.34f6c473.js.map",
     "453.3df219f2.chunk.js.map": "/YASWA-SALES/static/js/453.3df219f2.chunk.js.map"
   },
   "entrypoints": [
-    "static/css/main.641af195.css",
-    "static/js/main.df8c37e5.js"
+    "static/css/main.db5a903b.css",
+    "static/js/main.34f6c473.js"
   ]
 }
