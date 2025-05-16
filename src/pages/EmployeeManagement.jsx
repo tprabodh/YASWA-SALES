@@ -30,7 +30,7 @@ export default function EmployeeManagement() {
   const [isAssignModalOpen, setIsAssignModalOpen] = useState(false);
 
   // Fetch employees
-  useEffect(() => {
+   useEffect(() => {
     (async () => {
       const snap = await getDocs(collection(db, 'users'));
       setEmployees(snap.docs.map(d => ({ id: d.id, ...d.data() })));
@@ -41,22 +41,250 @@ export default function EmployeeManagement() {
     emp.name.toLowerCase().includes(queryText.toLowerCase())
   );
 
-  // Disengage...
-  const disengageEmployee = async emp => { /* as you have it */ };
+  const disengageEmployee = async (employee) => {
+    try {
+      // Remove supervisorId from the employee's document
+      const employeeRef = doc(db, 'users', employee.id);
+      await updateDoc(employeeRef, {
+        supervisorId: deleteField(),
+      });
+  
+      // Find the manager's document by matching companyId
+      const manager = employees.find((emp) => emp.companyId === employee.supervisorId);
+      if (manager) {
+        const managerRef = doc(db, 'users', manager.id);
+        await updateDoc(managerRef, {
+          subordinates: arrayRemove(employee.companyId),
+        });
+      }
+  
+      // Update local state to reflect changes
+      setEmployees((prevEmployees) =>
+        prevEmployees.map((emp) => {
+          if (emp.id === employee.id) {
+            const updatedEmp = { ...emp };
+            delete updatedEmp.supervisorId;
+            return updatedEmp;
+          }
+          if (manager && emp.id === manager.id) {
+            return {
+              ...emp,
+              subordinates: emp.subordinates?.filter((id) => id !== employee.companyId) || [],
+            };
+          }
+          return emp;
+        })
+      );
+    } catch (error) {
+      console.error('Error disengaging employee:', error);
+    }
+  };
 
   // Mark Paid & Export
-  const handlePaid = async emp => { console.log("▶️ Marking paid for:", emp);};
+  // Full handlePaid implementation
+    const handlePaid = async (emp) => {
+    // 1) fetch all this employee’s reports by companyId
+    const reportsRef = collection(db, 'reports');
+    const q = query(
+      reportsRef,
+      where('companyId', '==', emp.companyId)
+    );
+    const snap = await getDocs(q);
+    const allReports = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+
+    // 2) warn if any Pending remain
+    const pending = allReports.filter(r => r.status === 'Pending');
+    if (pending.length) {
+      alert(
+        `Cannot mark paid – ${pending.length} report(s) are still Pending.\n` +
+        `Approve or Reject them first.`
+      );
+      return;
+    }
+
+    // 3) update all Approved → paymentStatus:'paid'
+    const approved = allReports.filter(r => r.status === 'Approved');
+    for (let r of approved) {
+      const rRef = doc(db, 'reports', r.id);
+      await updateDoc(rRef, { paymentStatus: 'paid' });
+    }
+
+   // 4) build Excel data
+const excelData = approved.map(r => ({
+  'Employee Name': emp.name,
+  'Company ID': r.companyId,
+  'Student Name': r.studentName,
+  'Grade': r.grade,
+  'Created At': r.createdAt?.toDate().toLocaleString() || '',
+  'Phone': r.studentPhone,
+  'WhatsApp': r.whatsappNumber,
+  'Email': r.studentEmail,
+  'Course': r.course,
+  'Status': r.status,
+  'Payment Status': 'paid',
+  'Commission (₹)': 2000,
+}));
+
+
+    // no approved reports? warn and exit
+    if (excelData.length === 0) {
+      alert('No Approved reports to mark as paid.');
+      return;
+    }
+
+    const ws = XLSX.utils.json_to_sheet(excelData);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Paid Reports');
+
+    const wbout = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
+    saveAs(
+      new Blob([wbout], { type: "application/octet-stream" }),
+      `${emp.name.replace(/\s+/g, '_')}_paid_reports.xlsx`
+    );
+  };
+
+
+// **Mark Paid (Manager)**:
+  const handleManagerPaidManager = async managerEmp => {
+    // 1) fetch subordinates by supervisorId = managerEmp.companyId
+    const usersQ = query(
+      collection(db, 'users'),
+      where('supervisorId', '==', managerEmp.companyId)
+    );
+    const usersSnap = await getDocs(usersQ);
+    const subordinateIds = usersSnap.docs.map(d => d.id);
+
+    if (!subordinateIds.length) {
+      alert('This manager has no subordinates.');
+      return;
+    }
+
+    // 2) fetch approved reports by those subordinates
+    const reportsQ = query(
+      collection(db, 'reports'),
+      where('userId', 'in', subordinateIds),
+      where('status', '==', 'Approved')
+    );
+    const repSnap = await getDocs(reportsQ);
+    const approved = repSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+
+    if (!approved.length) {
+      alert('No Approved reports to mark paid for this manager.');
+      return;
+    }
+
+    // 3) update each approved report
+    await Promise.all(
+      approved.map(r =>
+        updateDoc(doc(db, 'reports', r.id), { managerCommission: 'paid' })
+      )
+    );
+
+    // 4) build Excel
+    const excelData = approved.map(r => ({
+      'Employee Name':      managerEmp.name,
+      'Employee Company ID': managerEmp.companyId,
+      'Student Name':       r.studentName,
+      'Grade':              r.grade,
+      'Created At':         r.createdAt?.toDate().toLocaleString() || '',
+      'Phone':              r.studentPhone,
+      'WhatsApp':           r.whatsappNumber,
+      'Email':              r.studentEmail,
+      'Course':             r.course,
+      'Status':             r.status,
+      'Manager Commission': 'paid',
+      'Commission (₹)':     500,
+    }));
+
+    const ws = XLSX.utils.json_to_sheet(excelData);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Manager_Payouts');
+    const wbout = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
+
+    saveAs(
+      new Blob([wbout], { type: 'application/octet-stream' }),
+      `${managerEmp.name.replace(/\s+/g, '_')}_manager_payouts.xlsx`
+    );
+  };
+
 
   const openDetails = emp => { setSelectedEmployee(emp); setIsDetailsModalOpen(true); };
   const closeDetails = () => { setSelectedEmployee(null); setIsDetailsModalOpen(false); };
 
-  const promoteToManager = async id => { /* with check for supervisorId */ };
-  const demoteToEmployee = async id => { /* as is */ };
+const promoteToManager = async (companyId) => {
+    const employee = employees.find((emp) => emp.id === companyId);
+    if (employee?.supervisorId) {
+      alert('Please disengage this employee from their current manager before promoting.');
+      return;
+    }
+  
+    const employeeRef = doc(db, 'users', companyId);
+    await updateDoc(employeeRef, { role: 'manager', supervisorId: null });
+    setEmployees((prev) =>
+      prev.map((emp) =>
+        emp.id === companyId
+          ? { ...emp, role: 'manager', supervisorId: null }
+          : emp
+      )
+    );
+  };
+  const demoteToEmployee = async (companyId) => {
+    const employeeRef = doc(db, 'users', companyId);
+    await updateDoc(employeeRef, { role: 'employee' });
+    setEmployees((prev) =>
+      prev.map((emp) => (emp.id === companyId ? { ...emp, role: 'employee' } : emp))
+    );
+  };
 
   const openAssign = mgr => { setSelectedManager(mgr); setIsAssignModalOpen(true); };
   const closeAssign = () => { setSelectedManager(null); setIsAssignModalOpen(false); };
 
-  const assignSubs = async ids => { /* as is */ };
+  const assignSubordinates = async (subordinateIds) => {
+    if (!selectedManager || !selectedManager.companyId) {
+      console.error('Selected manager is invalid or missing companyId.');
+      return;
+    }
+  
+    const updatedEmployees = [...employees];
+    const managerCompanyId = selectedManager.companyId;
+  
+    // Update subordinates' supervisorId field
+    for (const id of subordinateIds) {
+      const employeeRef = doc(db, 'users', id);
+      const employee = employees.find((emp) => emp.id === id);
+      if (!employee) continue;
+  
+      await updateDoc(employeeRef, { supervisorId: managerCompanyId });
+  
+      const index = updatedEmployees.findIndex((emp) => emp.id === id);
+      if (index !== -1) {
+        updatedEmployees[index].supervisorId = managerCompanyId;
+      }
+    }
+  
+    // Update manager's subordinates field
+    const managerRef = doc(db, 'users', selectedManager.id);
+    const subordinateCompanyIds = subordinateIds
+      .map((subId) => employees.find((e) => e.id === subId)?.companyId)
+      .filter((id) => id); // Filter out undefined
+  
+    await updateDoc(managerRef, {
+      subordinates: arrayUnion(...subordinateCompanyIds),
+    });
+  
+    const updatedManagerIndex = updatedEmployees.findIndex(
+      (emp) => emp.id === selectedManager.id
+    );
+    if (updatedManagerIndex !== -1) {
+      const existingSubordinates =
+        updatedEmployees[updatedManagerIndex].subordinates || [];
+      updatedEmployees[updatedManagerIndex].subordinates = [
+        ...new Set([...existingSubordinates, ...subordinateCompanyIds]),
+      ];
+    }
+  
+    setEmployees(updatedEmployees);
+  };
 
   return (
     <div className="min-h-screen bg-gray-50 p-6">
@@ -144,6 +372,12 @@ export default function EmployeeManagement() {
                       >
                         Assign
                       </button>
+                      <button
+                        onClick={() => handleManagerPaidManager(emp)}
+                        className="px-3 py-1 bg-purple-600 text-white rounded hover:bg-purple-700"
+                      >
+                        Mark Paid (Mgr)
+                      </button>
                     </>
                   )}
 
@@ -175,7 +409,7 @@ export default function EmployeeManagement() {
           onRequestClose={closeAssign}
           manager={selectedManager}
           employees={employees}
-          onAssign={assignSubs}
+          onAssign={assignSubordinates}
         />
       )}
     </div>
