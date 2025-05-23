@@ -59,6 +59,39 @@ export default function TopBar() {
                 Admin Panel
               </NavLink>
             )}
+
+{profile.role === 'telecaller' && (
+  <NavLink
+    to="/telecaller"
+    className="block text-gray-700 hover:text-blue-600 px-3 py-2 rounded-md text-base font-medium"
+    onClick={() => setMenuOpen(false)}
+  >
+    Telecaller View
+  </NavLink>
+)}
+
+
+      {['employee'].includes(profile?.role) && (
+      <NavLink
+  to="payment-history"
+  className="block text-gray-700 hover:text-blue-600 px-3 py-2 rounded-md text-base font-medium"
+  onClick={() => setMenuOpen(false)}
+>
+  Payment History
+</NavLink>
+      )}
+
+{profile.role === 'manager' && (
+      <NavLink
+  to="manager-payment-history"
+  className="block text-gray-700 hover:text-blue-600 px-3 py-2 rounded-md text-base font-medium"
+  onClick={() => setMenuOpen(false)}
+>
+  Payment History
+</NavLink>
+      )}
+    
+
             <button
               onClick={handleLogout}
               className="px-3 py-1 bg-red-500 text-white rounded hover:bg-red-600"
@@ -112,6 +145,7 @@ export default function TopBar() {
                 Admin Panel
               </NavLink>
             )}
+
             <button
               onClick={() => {
                 setMenuOpen(false);
@@ -121,6 +155,37 @@ export default function TopBar() {
             >
               Logout
             </button>
+
+    {profile.role === 'telecaller' && (
+  <NavLink
+    to="/telecaller"
+    className="block text-gray-700 hover:text-blue-600 px-3 py-2 rounded-md text-base font-medium"
+    onClick={() => setMenuOpen(false)}
+  >
+    Telecaller View
+  </NavLink>
+)}
+
+  {['employee'].includes(profile?.role) && (
+      <NavLink
+  to="payment-history"
+  className="block text-gray-700 hover:text-blue-600 px-3 py-2 rounded-md text-base font-medium"
+  onClick={() => setMenuOpen(false)}
+>
+  Payment History
+</NavLink>
+      )}
+
+{profile.role === 'manager' && (
+      <NavLink
+  to="manager-payment-history"
+  className="block text-gray-700 hover:text-blue-600 px-3 py-2 rounded-md text-base font-medium"
+  onClick={() => setMenuOpen(false)}
+>
+  Payment History
+</NavLink>
+      )}
+
           </div>
         </div>
       )}

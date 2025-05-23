@@ -60,16 +60,27 @@ export default function AdminDashboardPage() {
   return (
     <div className="min-h-screen bg-gray-100 p-6 overflow-x-auto">
       <div className="max-w-7xl mx-auto">
+        <br />
+        <br />
         <h2 className="text-2xl font-bold mb-6 text-black">
           Admin Dashboard
         </h2>
-
+      <div class="inline-flex flex space-x-4 rounded-md shadow-xs" role="group">
         <button
+          type='button'
           onClick={() => navigate('/employee-management')}
           className="px-3 py-1 bg-indigo-500 text-white mb-6 rounded hover:bg-indigo-900"
           >
           Go to Employee Management
         </button>
+         
+         <button type='button'  
+         onClick={() => navigate('/admin/employee-summary')}
+        className="px-3 py-1 bg-indigo-500 text-white mb-6 rounded hover:bg-indigo-900">
+        Managers Summary
+        </button>
+        </div>
+       
 
         <div className="overflow-x-auto bg-white shadow rounded-lg">
           <table className="min-w-full divide-y divide-gray-200">

@@ -18,11 +18,15 @@ import SearchBar from '../Components/SearchBar';
 import EmployeeDetailsModal from '../Components/EmployeeDetailsModal';
 import AssignSubordinatesModal from '../Components/AssignSubordinatesModal';
 import Modal from 'react-modal';
+import { useLocation, useNavigate } from 'react-router-dom';
+
 
 Modal.setAppElement('#root');
 
 export default function EmployeeManagement() {
+  const [promoteTarget, setPromoteTarget] = useState(null);
   const [employees, setEmployees] = useState([]);
+  const navigate = useNavigate();
   const [queryText, setQueryText] = useState('');
   const [selectedEmployee, setSelectedEmployee] = useState(null);
   const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
@@ -228,6 +232,38 @@ const promoteToManager = async (companyId) => {
       )
     );
   };
+
+  const handlePromote = async emp => {
+    const promoteMgr = window.confirm(
+      "OK → Promote to Manager\nCancel → Promote to Telecaller"
+    );
+
+    if (promoteMgr) {
+      // existing promote to manager
+      if (emp.supervisorId) {
+        alert('Please disengage this employee before promoting.');
+        return;
+      }
+      const ref = doc(db, 'users', emp.id);
+      await updateDoc(ref, { role: 'manager', supervisorId: null });
+      setEmployees(prev =>
+        prev.map(e =>
+          e.id === emp.id
+            ? { ...e, role: 'manager', supervisorId: null }
+            : e
+        )
+      );
+    } else {
+      // promote to telecaller
+      const ref = doc(db, 'users', emp.id);
+      await updateDoc(ref, { role: 'telecaller' });
+      setEmployees(prev =>
+        prev.map(e => (e.id === emp.id ? { ...e, role: 'telecaller' } : e))
+      );
+    }
+  };
+ 
+
   const demoteToEmployee = async (companyId) => {
     const employeeRef = doc(db, 'users', companyId);
     await updateDoc(employeeRef, { role: 'employee' });
@@ -288,6 +324,8 @@ const promoteToManager = async (companyId) => {
 
   return (
     <div className="min-h-screen bg-gray-50 p-6">
+      <br />
+      <br />
       <h2 className="text-2xl font-bold text-gray-800 mb-6">
         Employee Management
       </h2>
@@ -338,6 +376,16 @@ const promoteToManager = async (companyId) => {
                     View
                   </button>
 
+                  {emp.role === 'telecaller' && (
+  <button
+    className="px-3 py-1 bg-blue-500 text-white rounded hover:bg-blue-600"
+    onClick={() => navigate(`/assign-managers/${emp.id}`)}
+  >
+    Assign Managers
+  </button>
+)}
+
+
                   <button
                     type="button"
                     onClick={() => handlePaid(emp)}
@@ -346,17 +394,37 @@ const promoteToManager = async (companyId) => {
                     Mark Paid
                   </button>
 
-                  {emp.role === 'employee' && (
-                    <button
-                      type="button"
-                      onClick={() => promoteToManager(emp.id)}
-                      className="px-3 py-1 bg-green-500 text-white rounded hover:bg-green-600"
-                    >
-                      Promote
-                    </button>
-                  )}
+                 {emp.role === 'employee' && (
+   <button
+     type="button"
+     onClick={() => setPromoteTarget(emp)}
+     className="px-3 py-1 bg-green-500 text-white rounded hover:bg-green-600"
+   >
+     Promote
+   </button>
+ )}
 
-                  {emp.role === 'manager' && (
+                  {emp.role === 'telecaller' && (
+  <button
+    type="button"
+    onClick={async () => {
+      const empRef = doc(db, 'users', emp.id);
+      await updateDoc(empRef, { role: 'employee' });
+      setEmployees(prev =>
+        prev.map(e =>
+          e.id === emp.id
+            ? { ...e, role: 'employee' }
+            : e
+        )
+      );
+    }}
+    className="px-3 py-1 bg-yellow-500 text-white rounded hover:bg-yellow-600"
+  >
+    Demote
+  </button>
+)}
+
+                  {emp.role === 'manager' &&  (
                     <>
                       <button
                         type="button"
@@ -403,6 +471,62 @@ const promoteToManager = async (companyId) => {
         employee={selectedEmployee}
         employees={employees}
       />
+            {/* ─── Promote Modal ─────────────────────────────────── */}
+      <Modal
+        isOpen={!!promoteTarget}
+        onRequestClose={() => setPromoteTarget(null)}
+        className="bg-white p-6 mx-auto mt-20 max-w-sm rounded shadow-lg outline-none"
+        overlayClassName="fixed inset-0 bg-black bg-opacity-30 flex items-start justify-center"
+      >
+        <h3 className="text-lg font-semibold mb-4">
+          Promote {promoteTarget?.name}
+        </h3>
+        <div className="flex flex-col space-y-3">
+          <button
+  onClick={async () => {
+    const empRef = doc(db, 'users', promoteTarget.id);
+    // 1) Update Firestore
+    await updateDoc(empRef, { role: 'manager', supervisorId: null });
+
+    // 2) Update local React state so the table re-renders correctly
+    setEmployees(prev =>
+      prev.map(e =>
+        e.id === promoteTarget.id
+          ? { ...e, role: 'manager', supervisorId: null }
+          : e
+      )
+    );
+
+    // 3) Close the modal
+    setPromoteTarget(null);
+  }}
+  className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700"
+>
+  Promote to Manager
+</button>
+
+          <button
+            onClick={async () => {
+              // Promote to telecaller
+              const empRef = doc(db, 'users', promoteTarget.id);
+              await updateDoc(empRef, { role: 'telecaller' });
+              // update local state if needed...
+              setPromoteTarget(null);
+            }}
+            className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+          >
+            Promote to Telecaller
+          </button>
+          <button
+            onClick={() => setPromoteTarget(null)}
+            className="mt-4 text-gray-600 hover:underline self-end"
+          >
+            Cancel
+          </button>
+        </div>
+      </Modal>
+
+
       {selectedManager && (
         <AssignSubordinatesModal
           isOpen={isAssignModalOpen}
