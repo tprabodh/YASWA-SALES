@@ -1,16 +1,16 @@
 {
   "files": {
     "main.css": "/YASWA-SALES/static/css/main.8e04228a.css",
-    "main.js": "/YASWA-SALES/static/js/main.fa59f70b.js",
+    "main.js": "/YASWA-SALES/static/js/main.13b74000.js",
     "static/js/453.3df219f2.chunk.js": "/YASWA-SALES/static/js/453.3df219f2.chunk.js",
     "static/media/logo.png": "/YASWA-SALES/static/media/logo.d878d7fca8f80928705c.png",
     "index.html": "/YASWA-SALES/index.html",
     "main.8e04228a.css.map": "/YASWA-SALES/static/css/main.8e04228a.css.map",
-    "main.fa59f70b.js.map": "/YASWA-SALES/static/js/main.fa59f70b.js.map",
+    "main.13b74000.js.map": "/YASWA-SALES/static/js/main.13b74000.js.map",
     "453.3df219f2.chunk.js.map": "/YASWA-SALES/static/js/453.3df219f2.chunk.js.map"
   },
   "entrypoints": [
     "static/css/main.8e04228a.css",
-    "static/js/main.fa59f70b.js"
+    "static/js/main.13b74000.js"
   ]
 }
