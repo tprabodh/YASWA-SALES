@@ -46,8 +46,8 @@ import ManagerSummaryPage from './pages/ManagerSummaryPage';
 
 
 function App() {
-  return (
-     <BrowserRouter basename="/YASWA-SALES">
+ return (
+    <BrowserRouter basename={process.env.PUBLIC_URL || '/'}>
       <Routes>
         {/* Public route */}
         <Route path="/" element={<LoginPage />} />
@@ -94,25 +94,20 @@ function App() {
   path="/associate-manager/team-breakup/:historyId"
   element={<AssociateManagerTeamBreakupPage />}
 />
-
              <Route
           path="/associate/payment-history"
           element={<AssociatePaymentHistoryPage />}
         />
-
         {/* Associate payment‐history detail (shows the actual reports paid in that event) */}
         <Route
           path="/associate/payment-history/:historyId"
           element={<AssociatePaymentHistoryDetailPage />}
         />
-
                     <Route path="admin/payment-history" element={<AdminPaymentHistoryPage />} />
                     <Route
   path="/admin/associate-payment-history"
   element={<AdminAssociatePaymentHistoryPage />}
 />
-
-
             <Route path="manager-payment-breakup/:runId" element={<ManagerPaymentBreakupPage />}/>
             <Route path="/businesshead" element={<BusinessHeadView />} />
             <Route path="/manager-unpaid-commissions" element={<ManagerUnpaidCommissionPage />}/>
