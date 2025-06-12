@@ -9,14 +9,17 @@ import {
   Timestamp,
 } from 'firebase/firestore';
 import { useNavigate } from 'react-router-dom';
-import DateRangePicker from '../Components/DateRangePicker'; // your shared picker
+import DateRangePicker from '../Components/DateRangePicker';
+import SearchBar       from '../Components/SearchBar';
+import { getDateRange } from '../utils/dateUtils';
 
 export default function AdminEmployeeSummaryPage() {
-  const [managers, setManagers] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [managers,    setManagers]    = useState([]);
+  const [loading,     setLoading]     = useState(true);
+  const [queryText,   setQueryText]   = useState('');
 
   // date‐range state
-  const [dateType, setDateType] = useState('today');
+  const [dateType,    setDateType]    = useState('today');
   const [customRange, setCustomRange] = useState({ start: null, end: null });
 
   const navigate = useNavigate();
@@ -25,57 +28,46 @@ export default function AdminEmployeeSummaryPage() {
     (async () => {
       setLoading(true);
 
-      // compute our timestamp bounds once per run
-      const { start, end } = (() => {
-        const now = new Date();
-        if (dateType === 'today') {
-          const s = new Date(now); s.setHours(0,0,0,0);
-          const e = new Date(now); e.setHours(23,59,59,999);
-          return { start: Timestamp.fromDate(s), end: Timestamp.fromDate(e) };
-        }
-        if (dateType === 'last7') {
-          const s = new Date(now - 6 * 864e5);
-          return { start: Timestamp.fromDate(s), end: Timestamp.fromDate(now) };
-        }
-        if (dateType === 'last30') {
-          const s = new Date(now - 29 * 864e5);
-          return { start: Timestamp.fromDate(s), end: Timestamp.fromDate(now) };
-        }
-        if (dateType === 'custom' && customRange.start && customRange.end) {
-          return {
-            start: Timestamp.fromDate(customRange.start),
-            end:   Timestamp.fromDate(customRange.end),
-          };
-        }
-        // fallback to today
-        const s = new Date(now); s.setHours(0,0,0,0);
-        const e = new Date(now); e.setHours(23,59,59,999);
-        return { start: Timestamp.fromDate(s), end: Timestamp.fromDate(e) };
-      })();
+      // 1) Compute our JS Date window via the shared util
+      const { start: jsStart, end: jsEnd } = getDateRange(dateType, customRange);
+      // make sure both are valid Date objects
+      if (!(jsStart instanceof Date) || !(jsEnd instanceof Date)) {
+        // shouldn't happen unless customRange is invalid
+        setManagers([]);
+        setLoading(false);
+        return;
+      }
+      const start = Timestamp.fromDate(jsStart);
+      const end   = Timestamp.fromDate(jsEnd);
 
-      // 1) fetch all managers
+      // 2) Fetch all managers
       const usersSnap = await getDocs(
         query(collection(db, 'users'), where('role', '==', 'manager'))
       );
-      const mgrs = usersSnap.docs.map(d => ({ uid: d.id, ...d.data() }));
+      const mgrs = usersSnap.docs.map(d => ({
+        uid:       d.id,
+        name:      d.data().name,
+        companyId: d.data().companyId,
+      }));
 
-      // 2) for each manager, fetch all their reports and filter in-memory
-      let withCounts = await Promise.all(
+      // 3) For each manager, count reports in our window
+      const withCounts = await Promise.all(
         mgrs.map(async mgr => {
-          const reportsRef = collection(db, 'reports');
-          const mgrQuery   = query(reportsRef, where('managerId', '==', mgr.companyId));
-          const snap       = await getDocs(mgrQuery);
-
-          const countInRange = snap.docs.filter(doc => {
+          const rptSnap = await getDocs(
+            query(
+              collection(db, 'reports'),
+              where('managerId', '==', mgr.companyId)
+            )
+          );
+          const countInRange = rptSnap.docs.filter(doc => {
             const ts = doc.data().createdAt;
-            return ts && ts.toMillis() >= start.toMillis() && ts.toMillis() <= end.toMillis();
+            return ts.toMillis() >= start.toMillis() && ts.toMillis() <= end.toMillis();
           }).length;
-
-          return { ...mgr, reportsToday: countInRange };
+          return { ...mgr, reportCount: countInRange };
         })
       );
 
-      // 3) sort alphabetically by manager name
+      // 4) Sort by name
       withCounts.sort((a, b) => a.name.localeCompare(b.name));
 
       setManagers(withCounts);
@@ -91,30 +83,41 @@ export default function AdminEmployeeSummaryPage() {
     );
   }
 
+  // 5) Filter by search (name or companyId)
+  const filtered = managers.filter(m =>
+    m.name.toLowerCase().includes(queryText.toLowerCase()) ||
+    m.companyId.toLowerCase().includes(queryText.toLowerCase())
+  );
+
   return (
     <div className="min-h-screen bg-gray-50 p-6">
-      {/* Date selector */}
-      <br />
-      <br />
-      <br />
+      <br /><br /><br />
+
       <div className="mb-6 max-w-md">
         <DateRangePicker
           value={dateType}
           onChangeType={setDateType}
           customRange={customRange}
-          onChangeCustom={delta =>
-            setCustomRange(cr => ({ ...cr, ...delta }))
-          }
+          onChangeCustom={delta => setCustomRange(cr => ({ ...cr, ...delta }))}
         />
       </div>
 
       <h2 className="text-2xl font-bold text-gray-800 mb-4">Employee Summary</h2>
 
+      {/* Search bar */}
+      <div className="mb-4 max-w-sm">
+        <SearchBar
+          query={queryText}
+          setQuery={setQueryText}
+        />
+      </div>
+
+      {/* Table */}
       <div className="overflow-x-auto bg-white rounded-lg shadow">
         <table className="min-w-full divide-y divide-gray-200">
           <thead className="bg-gray-100">
             <tr>
-              {['Manager ID', 'Name', '# Reports', 'Actions'].map(hdr => (
+              {['Manager ID','Name','# Reports','Actions'].map(hdr => (
                 <th
                   key={hdr}
                   className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wide"
@@ -125,25 +128,29 @@ export default function AdminEmployeeSummaryPage() {
             </tr>
           </thead>
           <tbody className="bg-white divide-y divide-gray-200">
-            {managers.map(mgr => (
+            {filtered.length > 0 ? filtered.map(mgr => (
               <tr key={mgr.uid}>
                 <td className="px-6 py-4 text-sm text-gray-900">{mgr.companyId}</td>
                 <td className="px-6 py-4 text-sm text-gray-900">{mgr.name}</td>
-                <td className="px-6 py-4 text-sm text-gray-900">{mgr.reportsToday}</td>
+                <td className="px-6 py-4 text-sm text-gray-900">{mgr.reportCount}</td>
                 <td className="px-6 py-4 space-x-2">
-                  <button onClick={() => navigate(`/admin/employee-summary/${mgr.uid}`, {state: { manager: mgr }})}
-                                     className="px-3 py-1 bg-indigo-500 text-white rounded hover:bg-indigo-600 transition"
-                 >
-                  
+                  <button
+                    onClick={() =>
+                      navigate(
+                        `/admin/employee-summary/${mgr.uid}`,
+                        { state: { manager: mgr } }
+                      )
+                    }
+                    className="px-3 py-1 bg-indigo-500 text-white rounded hover:bg-indigo-600 text-sm"
+                  >
                     View Summary
                   </button>
                 </td>
               </tr>
-            ))}
-            {managers.length === 0 && (
+            )) : (
               <tr>
                 <td colSpan={4} className="px-6 py-4 text-center text-gray-500">
-                  No managers found.
+                  No managers match your search.
                 </td>
               </tr>
             )}

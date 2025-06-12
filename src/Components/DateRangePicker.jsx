@@ -2,7 +2,7 @@
 import React from 'react';
 
 export default function DateRangePicker({
-  value,           // 'today' | 'last7' | 'last30' | 'custom' | 'allTime'
+  value,           // 'today' | 'yesterday' | 'thisWeek' | 'thisMonth' | 'custom'
   onChangeType,    // fn: newType => void
   customRange,     // { start: Date|null, end: Date|null }
   onChangeCustom,  // fn: ({ start?, end? }) => void
@@ -10,17 +10,17 @@ export default function DateRangePicker({
   return (
     <div className="flex flex-wrap gap-4 items-end">
       <div>
-        <label className="block text-sm font-medium">Range</label>
+        <label className="block text-sm font-medium">Date/Period</label>
         <select
           value={value}
           onChange={e => onChangeType(e.target.value)}
           className="mt-1 block w-full border-gray-300 rounded-md shadow-sm"
         >
           <option value="today">Today</option>
-          <option value="last7">Last 7 days</option>
-          <option value="last30">Last 30 days</option>
-          <option value="custom">Custom</option>
-          <option value="allTime">All Time</option>
+          <option value="yesterday">Yesterday</option>
+          <option value="thisWeek">This Week</option>
+          <option value="thisMonth">This Month</option>
+          <option value="custom">Custom…</option>
         </select>
       </div>
 

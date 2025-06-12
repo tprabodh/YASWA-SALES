@@ -70,8 +70,11 @@ export default function ViewReportPage() {
               ['Grade', report.grade],
               ['Course Purchased', report.course],
               ['Status', report.status],
-              ['Employee Name', employeeName],
-              ['Company ID', companyId],
+              ['Consultant Name', employeeName],
+              ['Consultant ID', companyId],
+              ['Purchased Date', report.createdAt
+                      ? report.createdAt.toDate().toLocaleDateString()
+                      : '—']
             ].map(([label, value]) => (
               <div key={label}>
                 <p className="text-sm text-gray-600">{label}</p>

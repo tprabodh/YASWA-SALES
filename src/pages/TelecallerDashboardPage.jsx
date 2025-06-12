@@ -4,34 +4,61 @@ import { Navigate, useNavigate } from 'react-router-dom';
 import { useUserProfile } from '../hooks/useUserProfile';
 import DateRangePicker from '../Components/DateRangePicker';
 import { db } from '../firebase';
-import { collection, getDocs, query, where, Timestamp } from 'firebase/firestore';
+import {
+  collection,
+  getDocs,
+  query,
+  where,
+  Timestamp
+} from 'firebase/firestore';
 
 function getDateRange(type, custom) {
   const now = new Date();
+  let start, end;
+
   if (type === 'today') {
-    const s = new Date(now); s.setHours(0,0,0,0);
-    const e = new Date(now); e.setHours(23,59,59,999);
-    return { start: s, end: e };
+    start = new Date(now); start.setHours(0,0,0,0);
+    end   = new Date(now); end.setHours(23,59,59,999);
+
+  } else if (type === 'yesterday') {
+    const d = new Date(now);
+    d.setDate(d.getDate() - 1);
+    start = new Date(d); start.setHours(0,0,0,0);
+    end   = new Date(d); end.setHours(23,59,59,999);
+
+  } else if (type === 'thisWeek') {
+    // week starts Monday
+    const day = now.getDay(), diff = (day + 6) % 7;
+    start = new Date(now); start.setDate(now.getDate() - diff); start.setHours(0,0,0,0);
+    end   = new Date(start); end.setDate(start.getDate() + 6);    end.setHours(23,59,59,999);
+
+  } else if (type === 'thisMonth') {
+    start = new Date(now.getFullYear(), now.getMonth(), 1);
+    end   = new Date(now.getFullYear(), now.getMonth()+1, 0);
+    start.setHours(0,0,0,0);
+    end.setHours(23,59,59,999);
+
+  } else if (type === 'custom' && custom.start && custom.end) {
+    start = custom.start;
+    end   = custom.end;
+
+  } else {
+    // fallback to today
+    start = new Date(now); start.setHours(0,0,0,0);
+    end   = new Date(now); end.setHours(23,59,59,999);
   }
-  if (type === 'last7')  return { start: new Date(now - 6*864e5), end: now };
-  if (type === 'last30') return { start: new Date(now - 29*864e5), end: now };
-  if (type === 'custom' && custom.start && custom.end) {
-    return { start: custom.start, end: custom.end };
-  }
-  // fallback
-  const s = new Date(now); s.setHours(0,0,0,0);
-  const e = new Date(now); e.setHours(23,59,59,999);
-  return { start: s, end: e };
+
+  return { start, end };
 }
 
 export default function TelecallerDashboardPage() {
   const { profile, loading: authLoading } = useUserProfile();
   const navigate = useNavigate();
 
-  const [dateType, setDateType]    = useState('today');
+  const [dateType, setDateType]       = useState('today');
   const [customRange, setCustomRange] = useState({ start: null, end: null });
-  const [managers, setManagers]    = useState([]);
-  const [loading, setLoading]      = useState(true);
+  const [managers, setManagers]       = useState([]);
+  const [loading, setLoading]         = useState(true);
 
   // Compute date bounds
   const { start, end } = useMemo(
@@ -41,93 +68,106 @@ export default function TelecallerDashboardPage() {
   const bStart = useMemo(() => Timestamp.fromDate(start), [start]);
   const bEnd   = useMemo(() => Timestamp.fromDate(end),   [end]);
 
-  
-
   useEffect(() => {
+    // 1) Don’t run until auth finishes
     if (authLoading) return;
-    setLoading(true);
 
+    // 2) If profile is null or role isn’t telecaller, skip fetching
+    if (!profile || profile.role !== 'telecaller') {
+      setManagers([]); // ensure we don’t show stale data
+      setLoading(false);
+      return;
+    }
+
+    setLoading(true);
     (async () => {
-      // 1) profile.managing is array of companyIds
+      // 3) profile.managing is array of companyIds this telecaller manages
       const mgrCompanyIds = profile.managing || [];
 
-      // 2) load each manager’s user doc
+      // 4) Load each manager’s user‐doc (to get their UID + name)
       const mgrUsers = [];
       for (let cid of mgrCompanyIds) {
         const uSnap = await getDocs(
           query(collection(db, 'users'), where('companyId', '==', cid))
         );
         if (!uSnap.empty) {
-          const doc = uSnap.docs[0];
+          const docSnap = uSnap.docs[0];
           mgrUsers.push({
-            uid: doc.id,
-            name: doc.data().name,
+            uid: docSnap.id,
+            name: docSnap.data().name,
             companyId: cid,
           });
         }
       }
 
-      // 3) count their reports in window
-     // inside your useEffect:
-const enriched = await Promise.all(
-  mgrUsers.map(async m => {
-    // 1) manager’s own reports
-    const ownQ = query(
-      collection(db,'reports'),
-      where('companyId','==', m.companyId),
-      where('createdAt','>=', bStart),
-      where('createdAt','<=', bEnd)
-    );
-    const ownSnap = await getDocs(ownQ);
-    const ownCount = ownSnap.size;
+      // 5) For each manager, tally “own” + “subordinates’” reports broken down by status
+      const enriched = await Promise.all(
+        mgrUsers.map(async m => {
+          // A) Manager’s own reports in [bStart..bEnd]
+          const ownQ = query(
+            collection(db, 'reports'),
+            where('companyId', '==', m.companyId),
+            where('createdAt', '>=', bStart),
+            where('createdAt', '<=', bEnd)
+          );
+          const ownSnap = await getDocs(ownQ);
 
-    // 2) find all direct subordinates’ companyIds
-    const subQ = query(
-      collection(db,'users'),
-      where('supervisorId','==', m.companyId)
-    );
-    const subSnap = await getDocs(subQ);
-    const subCids = subSnap.docs.map(d => d.data().companyId).filter(Boolean);
+          // Count own statuses
+          let ownTotal = 0, ownApproved = 0, ownPending = 0, ownRejected = 0;
+          ownSnap.docs.forEach(d => {
+            const status = (d.data().status || '').toLowerCase();
+            ownTotal++;
+            if (status === 'approved') ownApproved++;
+            else if (status === 'pending') ownPending++;
+            else if (status === 'rejected') ownRejected++;
+          });
 
-    // 3) fetch their reports in chunks of 10
-    let subCount = 0;
-    for (let i = 0; i < subCids.length; i += 10) {
-      const chunk = subCids.slice(i, i + 10);
-      const repsQ = query(
-        collection(db,'reports'),
-        where('companyId','in', chunk),
-        where('createdAt','>=', bStart),
-        where('createdAt','<=', bEnd)
+          // B) Find direct subordinates’ companyIds
+          const subQ = query(
+            collection(db, 'users'),
+            where('supervisorId', '==', m.companyId)
+          );
+          const subSnap = await getDocs(subQ);
+          const subCids = subSnap.docs.map(d => d.data().companyId).filter(Boolean);
+
+          // C) Count subordinates’ reports in chunks of up to 10
+          let subTotal = 0, subApproved = 0, subPending = 0, subRejected = 0;
+          for (let i = 0; i < subCids.length; i += 10) {
+            const chunk = subCids.slice(i, i + 10);
+            const repsQ = query(
+              collection(db, 'reports'),
+              where('companyId', 'in', chunk),
+              where('createdAt', '>=', bStart),
+              where('createdAt', '<=', bEnd)
+            );
+            const repsSnap = await getDocs(repsQ);
+            repsSnap.docs.forEach(d => {
+              const status = (d.data().status || '').toLowerCase();
+              subTotal++;
+              if (status === 'approved') subApproved++;
+              else if (status === 'pending') subPending++;
+              else if (status === 'rejected') subRejected++;
+            });
+          }
+
+          return {
+            ...m,
+            total:    ownTotal + subTotal,
+            approved: ownApproved + subApproved,
+            pending:  ownPending + subPending,
+            rejected: ownRejected + subRejected
+          };
+        })
       );
-      const repsSnap = await getDocs(repsQ);
-      subCount += repsSnap.size;
-    }
 
-    const totalCount = ownCount + subCount;
-
-    // 4) allApproved only if every one of those reports is approved
-    const allDocs = [
-      ...ownSnap.docs.map(d => d.data()),
-      // and gather the sub-docs similarly if you need to test approval
-    ];
-    const allApproved = totalCount > 0
-      && allDocs.every(r => r.status.toLowerCase() === 'approved');
-
-    return {
-      ...m,
-      reportCount: totalCount,
-      allApproved
-    };
-  })
-);
-
-      // 4) sort alpha
-      enriched.sort((a,b) => a.name.localeCompare(b.name));
+      // 6) Sort alpha by manager name
+      enriched.sort((a, b) => a.name.localeCompare(b.name));
       setManagers(enriched);
       setLoading(false);
     })();
-  }, [authLoading, profile?.managing, bStart, bEnd]);
+  }, [authLoading, profile, bStart, bEnd]);
 
+  // While waiting for auth or data, show a spinner
   if (authLoading || loading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -136,18 +176,18 @@ const enriched = await Promise.all(
     );
   }
 
-  // Redirect non–telecallers
-  if (!authLoading && profile?.role !== 'telecaller') {
+  // If not logged in as a telecaller, redirect away
+  if (!profile || profile.role !== 'telecaller') {
     return <Navigate to="/" replace />;
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 p-6">
-      <h2 className="text-2xl font-bold mb-4">
-        Your Managers
-      </h2>
+    <div className="min-h-screen bg-gradient-to-br from-purple-50 to-indigo-50 p-6">
+      <br /><br />
+     <h2 className="text-2xl font-bold mb-4">
+  {profile.name} ({profile.companyId})'s Team Leads
+</h2>
 
-      {/* Date picker */}
       <div className="mb-6 max-w-md">
         <DateRangePicker
           value={dateType}
@@ -157,49 +197,46 @@ const enriched = await Promise.all(
         />
       </div>
 
-      {/* Table */}
-      <div className="overflow-x-auto bg-white rounded-lg shadow">
-        <table className="min-w-full divide-y divide-gray-200">
-          <thead className="bg-gray-100">
+      <div className="overflow-x-auto bg-white rounded-2xl shadow-lg">
+        <table className="min-w-full bg-white rounded-2xl">
+          <thead className="bg-indigo-100">
             <tr>
-              {['Name','Company ID','# Reports','All Approved','Actions'].map(h => (
-                <th key={h}
-                  className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase"
-                >
+              {['Name','ID','Total','Approved','Pending','Rejected',''].map(h => (
+                <th key={h} className="px-6 py-3 text-left text-sm font-semibold text-indigo-600">
                   {h}
                 </th>
               ))}
             </tr>
           </thead>
-          <tbody className="bg-white divide-y divide-gray-200">
-            {managers.length === 0 && (
+          <tbody>
+            {managers.length === 0 ? (
               <tr>
-                <td colSpan={5} className="px-6 py-4 text-center text-gray-500">
+                <td colSpan={7} className="py-8 text-center text-gray-500">
                   No managers assigned.
                 </td>
               </tr>
+            ) : (
+              managers.map((m,i) => (
+                <tr key={m.uid} className={i % 2 ? 'bg-indigo-50' : 'bg-white'}>
+                  <td className="px-6 py-4 font-medium text-indigo-800">{m.name}</td>
+                  <td className="px-6 py-4 text-indigo-600">{m.companyId}</td>
+                  <td className="px-6 py-4">{m.total}</td>
+                  <td className="px-6 py-4 text-green-600">{m.approved}</td>
+                  <td className="px-6 py-4 text-yellow-500">{m.pending}</td>
+                  <td className="px-6 py-4 text-red-500">{m.rejected}</td>
+                  <td className="px-6 py-4">
+                    <button
+                      onClick={() =>
+                        navigate(`/telecaller/manager-summary/${m.uid}`, { state:{ manager:m, range:{ start, end } }})
+                      }
+                      className="px-3 py-1 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition"
+                    >
+                      View
+                    </button>
+                  </td>
+                </tr>
+              ))
             )}
-            {managers.map((m,i) => (
-              <tr key={m.uid} className={i%2===0?'bg-white':'bg-gray-50'}>
-                <td className="px-6 py-4 text-sm text-gray-900">{m.name}</td>
-                <td className="px-6 py-4 text-sm text-gray-900">{m.companyId}</td>
-                <td className="px-6 py-4 text-sm text-gray-900">{m.reportCount}</td>
-                <td className="px-6 py-4 text-sm text-gray-900">
-                  {m.allApproved ? 'Yes' : 'No'}
-                </td>
-                <td className="px-6 py-4">
-                  <button
-                    onClick={() => navigate(
-                      `/admin/employee-summary/${m.uid}`,
-                      { state: { manager: m, range: { start, end } } }
-                    )}
-                    className="px-3 py-1 bg-indigo-500 text-white rounded hover:bg-indigo-600 text-sm"
-                  >
-                    View Summary
-                  </button>
-                </td>
-              </tr>
-            ))}
           </tbody>
         </table>
       </div>

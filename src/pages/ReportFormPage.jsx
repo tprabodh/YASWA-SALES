@@ -120,7 +120,7 @@ export default function ReportFormPage() {
       <div className="w-full max-w-md bg-white rounded-xl shadow-lg p-6 sm:p-8">
         
         <h1 className="text-xl sm:text-2xl font-semibold text-center text-[#8a1ccf] mb-6">
-          {isEditing ? 'Edit Report' : 'New Report'}
+          {isEditing ? 'Edit Sales Report' : 'New Sales Report'}
         </h1>
 
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">

@@ -1,4 +1,5 @@
 // src/pages/ManagerPaymentHistoryPage.jsx
+
 import React, { useEffect, useState } from 'react';
 import { useUserProfile }        from '../hooks/useUserProfile';
 import { Navigate, useNavigate } from 'react-router-dom';
@@ -15,51 +16,108 @@ export default function ManagerPaymentHistoryPage() {
   const { profile, loading: authLoading } = useUserProfile();
   const navigate = useNavigate();
 
-  const companyId = profile?.companyId;
-  const [runs,    setRuns]    = useState([]); // raw paymentHistory docs
-  const [counts,  setCounts]  = useState({}); // { runId: numberOfPaid }
+  // The manager's own companyId
+  const managerCompanyId = profile?.companyId;
+
+  // 1) Store payment-history runs
+  const [runs,    setRuns]    = useState([]);    // each run = { id, dateRange:{start,end}, managerIds:[], subordinateIds:[], paidAt }
+  const [counts,  setCounts]  = useState({});    // maps run.id → number of paid reports
   const [loading, setLoading] = useState(true);
 
+  // 2) Store the actual subordinates array from the users collection
+  const [managerSubCids, setManagerSubCids] = useState([]);
+
+  // (a) Fetch manager’s subordinates list once we know user is loaded
   useEffect(() => {
-    if (
-      authLoading ||
-      profile?.role !== 'manager' ||
-      !companyId
-    ) return;
+    if (authLoading) return;
+    if (profile?.role !== 'manager' || !managerCompanyId) return;
 
     (async () => {
-      // 1) load my payment runs
+      const mgrUserQ = query(
+        collection(db, 'users'),
+        where('companyId', '==', managerCompanyId)
+      );
+      const mgrUserSnap = await getDocs(mgrUserQ);
+      if (!mgrUserSnap.empty) {
+        const mgrData = mgrUserSnap.docs[0].data();
+        const subsArr = Array.isArray(mgrData.subordinates)
+                          ? mgrData.subordinates
+                          : [];
+        setManagerSubCids(subsArr);
+      } else {
+        setManagerSubCids([]);
+      }
+    })();
+  }, [authLoading, profile, managerCompanyId]);
+
+  // (b) Fetch paymentHistory runs and their counts, after we have managerSubCids
+  useEffect(() => {
+    if (authLoading) return;
+    if (profile?.role !== 'manager' || !managerCompanyId) return;
+    if (managerSubCids === null) return; // ensure state set
+
+    (async () => {
+      setLoading(true);
+
+      // 1) Fetch all paymentHistory docs where managerIds array‐contains this managerCompanyId
       const runsQ = query(
         collection(db, 'paymentHistory'),
-        where('employeeId', '==', companyId)
+        where('managerIds', 'array-contains', managerCompanyId)
       );
-      const snap = await getDocs(runsQ);
-      const docs = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-      setRuns(docs);
+      const runsSnap = await getDocs(runsQ);
+      let runDocs  = runsSnap.docs.map(d => ({ id: d.id, ...d.data() }));
 
-      // 2) count paid reports per run
-      const cts = {};
+      // 1.1) Filter out runs where managerIds and subordinateIds each only contain this manager’s own ID
+      runDocs = runDocs.filter(run => {
+        const mIds = run.managerIds || [];
+        const sIds = run.subordinateIds || [];
+        // if both arrays have length 1 and both equal managerCompanyId, skip
+        if (mIds.length === 1 && sIds.length === 1 &&
+            mIds[0] === managerCompanyId && sIds[0] === managerCompanyId) {
+          return false;
+        }
+        return true;
+      });
+
+      // 2) For each run, count how many paid reports from subordinates
+      const newCounts = {};
+
       await Promise.all(
-        docs.map(async run => {
-          const { start, end } = run.dateRange;
-          const rptQ = query(
-            collection(db, 'reports'),
-            where('managerId',        '==', companyId),
-            where('createdAt',       '>=', start),
-            where('createdAt',       '<=', end),
-            where('paymentStatus',   '==','paid'),
-            where('managerCommission','==','paid')
-          );
-          const rptSnap = await getDocs(rptQ);
-          cts[run.id] = rptSnap.size;
+        runDocs.map(async (run) => {
+          const startTS = run.dateRange.start;
+          const endTS   = run.dateRange.end;
+
+          if (!(managerSubCids.length)) {
+            newCounts[run.id] = 0;
+            return;
+          }
+
+          let paidCount = 0;
+          // chunk subordinate IDs to max 10 per "in" query
+          for (let i = 0; i < managerSubCids.length; i += 10) {
+            const chunk = managerSubCids.slice(i, i + 10);
+            const rptQ = query(
+              collection(db, 'reports'),
+              where('companyId', 'in', chunk),
+              where('createdAt',    '>=', startTS    || Timestamp.now()),
+              where('createdAt',    '<=', endTS      || Timestamp.now()),
+              where('paymentStatus','==','paid'),
+              where('managerCommission','==','paid')
+            );
+            const rptSnap = await getDocs(rptQ);
+            paidCount += rptSnap.size;
+          }
+          newCounts[run.id] = paidCount;
         })
       );
-      setCounts(cts);
+
+      setRuns(runDocs);
+      setCounts(newCounts);
       setLoading(false);
     })();
-  }, [authLoading, companyId, profile?.role]);
+  }, [authLoading, profile, managerCompanyId, managerSubCids]);
 
-  // loading / auth guards
+  // 3) Loading / auth guards
   if (authLoading || loading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -67,9 +125,11 @@ export default function ManagerPaymentHistoryPage() {
       </div>
     );
   }
-  if (profile?.role !== 'manager' || !companyId) {
+  if (profile?.role !== 'manager' || !managerCompanyId) {
     return <Navigate to="/" replace />;
   }
+
+  // 4) If there are no runs, show “No payment runs found.”
   if (!runs.length) {
     return (
       <div className="p-6">
@@ -79,82 +139,85 @@ export default function ManagerPaymentHistoryPage() {
     );
   }
 
-  // helper to look up UID from companyId
-  const lookupUid = async (companyId) => {
-    const uSnap = await getDocs(
-      query(collection(db,'users'), where('companyId','==',companyId))
+  // Navigate to breakup, passing subordinate IDs
+  const goToBreakup = (run) => {
+    navigate(
+      `/manager-payment-breakup/${run.id}`,
+      { state: { run, managerSubCids } }
     );
-    return uSnap.empty ? null : uSnap.docs[0].id;
   };
 
   return (
     <div className="p-6">
-      <h2 className="text-2xl font-bold mb-4">Manager Payment History</h2>
+        <br /><br />
+      <h2 className="text-2xl font-bold mb-4">My Team's Payment History</h2>
       <div className="overflow-x-auto bg-white rounded-lg shadow">
         <table className="min-w-full divide-y divide-gray-200">
           <thead className="bg-gray-100">
             <tr>
               {[
-                'Date Range',
-                'Paid At',
+                'Paid Date/Period',
+                'Paid On',
                 'Subordinate IDs',
-                '# Paid Reports',
-                'My Commission',
+                'Sale Quantity by Team',
+                'My Incentives',
                 'Actions'
-              ].map(h => (
+              ].map((hdr) => (
                 <th
-                  key={h}
+                  key={hdr}
                   className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase"
                 >
-                  {h}
+                  {hdr}
                 </th>
               ))}
             </tr>
           </thead>
+
           <tbody className="bg-white divide-y divide-gray-200">
             {runs.map((run, idx) => {
-              const s = run.dateRange.start.toDate();
-              const e = run.dateRange.end.toDate();
+              const startDate = run.dateRange.start.toDate();
+              const endDate   = run.dateRange.end.toDate();
               const paidCount = counts[run.id] || 0;
-              const subs       = run.subordinateIds || [];
 
               return (
                 <tr
                   key={run.id}
                   className={idx % 2 === 0 ? 'bg-white' : 'bg-gray-50'}
                 >
+                  {/* 1) Paid Date/Period */}
                   <td className="px-6 py-3 text-sm text-gray-800">
-                    {s.toLocaleDateString()} – {e.toLocaleDateString()}
+                    {startDate.toLocaleDateString()} – {endDate.toLocaleDateString()}
                   </td>
+
+                  {/* 2) Paid On */}
                   <td className="px-6 py-3 text-sm text-gray-800">
                     {run.paidAt.toDate().toLocaleString()}
                   </td>
+
+                  {/* 3) Subordinate IDs */}
                   <td className="px-6 py-3 text-sm text-gray-800">
-                    {subs.join(', ')}
+                    {managerSubCids.length
+                      ? managerSubCids.join(', ')
+                      : 'None'}
                   </td>
+
+                  {/* 4) Sale Quantity by Team */}
                   <td className="px-6 py-3 text-sm text-gray-800">
                     {paidCount}
                   </td>
+
+                  {/* 5) My Incentives */}
                   <td className="px-6 py-3 text-sm text-gray-800">
                     ₹{paidCount * 500}
                   </td>
+
+                  {/* 6) Actions → View Breakup */}
                   <td className="px-6 py-3 text-sm">
                     <button
+                      onClick={() => goToBreakup(run)}
                       className="px-3 py-1 bg-indigo-500 text-white rounded hover:bg-indigo-600 text-sm"
-                      onClick={async () => {
-                        // translate my companyId → my uid
-                        const myUid = await lookupUid(companyId);
-                        if (!myUid) {
-                          alert('Could not find your user record.');
-                          return;
-                        }
-                        navigate(
-                          '/manager/paid-reports',
-                          { state: { range: { start: s, end: e } } }
-                        );
-                      }}
                     >
-                      View Reports
+                      View Breakup
                     </button>
                   </td>
                 </tr>

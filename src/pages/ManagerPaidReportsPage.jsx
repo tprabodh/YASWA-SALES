@@ -1,38 +1,82 @@
 // src/pages/ManagerPaidReportsPage.jsx
+
 import React, { useEffect, useState } from 'react';
-import { useUserProfile }        from '../hooks/useUserProfile';
-import { Navigate, useLocation, useNavigate } from 'react-router-dom';
-import { collection, query, where, getDocs } from 'firebase/firestore';
+import {
+  Navigate,
+  useLocation,
+  useNavigate
+} from 'react-router-dom';
+import { useUserProfile } from '../hooks/useUserProfile';
+import {
+  collection,
+  query,
+  where,
+  getDocs,
+  Timestamp
+} from 'firebase/firestore';
 import { db } from '../firebase';
 
 export default function ManagerPaidReportsPage() {
   const { profile, loading: authLoading } = useUserProfile();
   const { state }       = useLocation();
+  // <-- Destructure subordinateCid (not "subordinate")
+  const { range, subordinateCid } = state || {};
   const navigate        = useNavigate();
-  const range           = state?.range;
   const companyId       = profile?.companyId;
 
   const [reports, setReports] = useState([]);
   const [loading, setLoading] = useState(true);
 
+  // Helper to rehydrate Timestamps if they were passed as plain objects
+  const toTimestamp = (val) => {
+    if (val instanceof Timestamp) return val;
+    if (val?.seconds != null)     return Timestamp.fromMillis(val.seconds * 1000);
+    return null;
+  };
+
   useEffect(() => {
-    if (authLoading) return;
-    if (profile?.role !== 'manager' || !companyId || !range) return;
+    console.log("ManagerPaidReportsPage useEffect start");
+    if (authLoading) {
+      console.log("still authLoading, exiting");
+      return;
+    }
+    // Must be a manager, have a companyId, and a date range
+    if (profile?.role !== 'manager' || !companyId || !range) {
+      console.warn("Missing manager role, companyId, or range:", { role: profile?.role, companyId, range });
+      setLoading(false);
+      return;
+    }
+    // Also require subordinateCid explicitly:
+    if (!subordinateCid) {
+      console.warn("Missing subordinateCid in state:", state);
+      setLoading(false);
+      return;
+    }
+
+    const startTS = toTimestamp(range.start);
+    const endTS   = toTimestamp(range.end);
+    console.log("startTS:", startTS, "endTS:", endTS);
+    if (!startTS || !endTS) {
+      console.warn('Invalid range passed to ManagerPaidReportsPage:', range);
+      setLoading(false);
+      return;
+    }
 
     (async () => {
-      const { start, end } = range;
-
-      // 1) fetch all paid reports for this manager in [start,end]
-      const rptQ = query(
+      console.log("Querying paid reports for subordinateCid:", subordinateCid);
+      // 1) Query all reports for that subordinateCid in the period, with both paid statuses
+      let rptQ = query(
         collection(db, 'reports'),
-        where('managerId',         '==', companyId),
-        where('createdAt',       '>=', start),
-        where('createdAt',       '<=', end),
-        where('paymentStatus',   '==','paid'),
-        where('managerCommission','==','paid')
+        where('companyId',        '==', subordinateCid),
+        where('createdAt',        '>=', startTS),
+        where('createdAt',        '<=', endTS),
+        where('paymentStatus',    '==', 'paid'),
+        where('managerCommission','==', 'paid')
       );
+
       const rptSnap = await getDocs(rptQ);
-      const raw = rptSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+      console.log("Raw reports fetched:", rptSnap.size);
+      const raw     = rptSnap.docs.map(d => ({ id: d.id, ...d.data() }));
 
       if (raw.length === 0) {
         setReports([]);
@@ -40,33 +84,34 @@ export default function ManagerPaidReportsPage() {
         return;
       }
 
-      // 2) fetch officer names in bulk
+      // 2) Batch lookup officer names
       const cids = [...new Set(raw.map(r => r.companyId))];
-      // Firestore limits 'in' to 10, so chunk if needed:
+      console.log("Unique officer companyIds:", cids);
       const nameMap = {};
       for (let i = 0; i < cids.length; i += 10) {
-        const slice = cids.slice(i, i + 10);
-        const uQ = query(
-          collection(db, 'users'),
-          where('companyId', 'in', slice)
+        const chunk = cids.slice(i, i + 10);
+        const uSnap = await getDocs(
+          query(collection(db, 'users'), where('companyId', 'in', chunk))
         );
-        const uSnap = await getDocs(uQ);
         uSnap.docs.forEach(d => {
-          nameMap[d.data().companyId] = d.data().name;
+          const data = d.data();
+          nameMap[data.companyId] = data.name;
         });
       }
 
-      // 3) combine
+      // 3) Combine name into each report
       const withNames = raw.map(r => ({
         ...r,
         officerName: nameMap[r.companyId] || '—'
       }));
 
+      console.log("With names:", withNames);
       setReports(withNames);
       setLoading(false);
     })();
-  }, [authLoading, profile, companyId, range]);
+  }, [authLoading, profile, companyId, range, subordinateCid, state]);
 
+  // --- Loading & auth guards ---
   if (authLoading || loading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -83,6 +128,7 @@ export default function ManagerPaidReportsPage() {
 
   return (
     <div className="p-6">
+      <br /><br />
       <h2 className="text-2xl font-bold mb-4">
         Paid Reports for {profile.name}
       </h2>

@@ -1,4 +1,5 @@
 // src/pages/EmployeeManagement.jsx
+
 import React, { useEffect, useState } from 'react';
 import {
   collection,
@@ -6,326 +7,299 @@ import {
   doc,
   updateDoc,
   arrayUnion,
-  arrayRemove,
   deleteField,
-  query,
-  where,
+  arrayRemove,
 } from 'firebase/firestore';
 import { db } from '../firebase';
-import * as XLSX from 'xlsx';
-import { saveAs } from 'file-saver';
 import SearchBar from '../Components/SearchBar';
 import EmployeeDetailsModal from '../Components/EmployeeDetailsModal';
 import AssignSubordinatesModal from '../Components/AssignSubordinatesModal';
+import AssignTelecallersModal from '../Components/AssignTelecallersModal';
+import AssignBusinessHeadsModal from '../Components/AssignBusinessHeadsModal';
 import Modal from 'react-modal';
-import { useLocation, useNavigate } from 'react-router-dom';
-
+import { useNavigate } from 'react-router-dom';
 
 Modal.setAppElement('#root');
 
 export default function EmployeeManagement() {
-  const [promoteTarget, setPromoteTarget] = useState(null);
-  const [employees, setEmployees] = useState([]);
-  const navigate = useNavigate();
-  const [queryText, setQueryText] = useState('');
-  const [selectedEmployee, setSelectedEmployee] = useState(null);
-  const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
-  const [selectedManager, setSelectedManager] = useState(null);
-  const [isAssignModalOpen, setIsAssignModalOpen] = useState(false);
+  const [promoteTarget, setPromoteTarget]             = useState(null);
+  const [employees, setEmployees]                     = useState([]);
+  const [queryText, setQueryText]                     = useState('');
+  const [selectedEmployee, setSelectedEmployee]       = useState(null);
+  const [isDetailsModalOpen, setIsDetailsModalOpen]   = useState(false);
+  const [selectedManager, setSelectedManager]         = useState(null);
+  const [isAssignModalOpen, setIsAssignModalOpen]     = useState(false);
+  const [selectedBusinessHead, setSelectedBusinessHead]           = useState(null);
+  const [isAssignTeleModalOpen, setIsAssignTeleModalOpen]         = useState(false);
+  const [selectedAssociateManager, setSelectedAssociateManager]   = useState(null);
+  const [isAssignAssociatesOpen, setIsAssignAssociatesOpen]       = useState(false);
 
-  // Fetch employees
-   useEffect(() => {
+  // NEW: for Sales Head
+  const [selectedSalesHead, setSelectedSalesHead]                 = useState(null);
+  const [isAssignBusinessHeadsOpen, setIsAssignBusinessHeadsOpen] = useState(false);
+
+  const navigate = useNavigate();
+
+  // ─── Fetch all users once on mount ─────────────────────────────────────────
+  useEffect(() => {
     (async () => {
       const snap = await getDocs(collection(db, 'users'));
       setEmployees(snap.docs.map(d => ({ id: d.id, ...d.data() })));
     })();
   }, []);
 
+  // ─── Filter employees by name or companyId ─────────────────────────────────
   const filtered = employees.filter(emp =>
-    emp.name.toLowerCase().includes(queryText.toLowerCase())
+    emp.name.toLowerCase().includes(queryText.toLowerCase()) ||
+    (emp.companyId || '').toLowerCase().includes(queryText.toLowerCase())
   );
 
+  // ─── Disengage a subordinate from their supervisor ─────────────────────────
   const disengageEmployee = async (employee) => {
     try {
-      // Remove supervisorId from the employee's document
-      const employeeRef = doc(db, 'users', employee.id);
-      await updateDoc(employeeRef, {
-        supervisorId: deleteField(),
-      });
-  
-      // Find the manager's document by matching companyId
-      const manager = employees.find((emp) => emp.companyId === employee.supervisorId);
-      if (manager) {
-        const managerRef = doc(db, 'users', manager.id);
-        await updateDoc(managerRef, {
-          subordinates: arrayRemove(employee.companyId),
+      // 1) Clear this user’s supervisorId
+      const empRef = doc(db, 'users', employee.id);
+      await updateDoc(empRef, { supervisorId: deleteField() });
+
+      // 2) Find the old manager by matching companyId
+      const oldManager = employees.find(e => e.companyId === employee.supervisorId);
+      if (oldManager) {
+        const mgrRef = doc(db, 'users', oldManager.id);
+        await updateDoc(mgrRef, {
+          subordinates: arrayRemove(employee.companyId)
         });
       }
-  
-      // Update local state to reflect changes
-      setEmployees((prevEmployees) =>
-        prevEmployees.map((emp) => {
-          if (emp.id === employee.id) {
-            const updatedEmp = { ...emp };
+
+      // 3) Update local state
+      setEmployees(prev =>
+        prev.map(e => {
+          if (e.id === employee.id) {
+            const updatedEmp = { ...e };
             delete updatedEmp.supervisorId;
             return updatedEmp;
           }
-          if (manager && emp.id === manager.id) {
+          if (oldManager && e.id === oldManager.id) {
             return {
-              ...emp,
-              subordinates: emp.subordinates?.filter((id) => id !== employee.companyId) || [],
+              ...e,
+              subordinates: (e.subordinates || []).filter(cid => cid !== employee.companyId)
             };
           }
-          return emp;
+          return e;
         })
       );
-    } catch (error) {
-      console.error('Error disengaging employee:', error);
+    } catch (err) {
+      console.error('Error disengaging employee:', err);
     }
   };
 
-  // Mark Paid & Export
-  // Full handlePaid implementation
-    const handlePaid = async (emp) => {
-    // 1) fetch all this employee’s reports by companyId
-    const reportsRef = collection(db, 'reports');
-    const q = query(
-      reportsRef,
-      where('companyId', '==', emp.companyId)
-    );
-    const snap = await getDocs(q);
-    const allReports = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-
-    // 2) warn if any Pending remain
-    const pending = allReports.filter(r => r.status === 'Pending');
-    if (pending.length) {
-      alert(
-        `Cannot mark paid – ${pending.length} report(s) are still Pending.\n` +
-        `Approve or Reject them first.`
-      );
-      return;
-    }
-
-    // 3) update all Approved → paymentStatus:'paid'
-    const approved = allReports.filter(r => r.status === 'Approved');
-    for (let r of approved) {
-      const rRef = doc(db, 'reports', r.id);
-      await updateDoc(rRef, { paymentStatus: 'paid' });
-    }
-
-   // 4) build Excel data
-const excelData = approved.map(r => ({
-  'Employee Name': emp.name,
-  'Company ID': r.companyId,
-  'Student Name': r.studentName,
-  'Grade': r.grade,
-  'Created At': r.createdAt?.toDate().toLocaleString() || '',
-  'Phone': r.studentPhone,
-  'WhatsApp': r.whatsappNumber,
-  'Email': r.studentEmail,
-  'Course': r.course,
-  'Status': r.status,
-  'Payment Status': 'paid',
-  'Commission (₹)': 2000,
-}));
-
-
-    // no approved reports? warn and exit
-    if (excelData.length === 0) {
-      alert('No Approved reports to mark as paid.');
-      return;
-    }
-
-    const ws = XLSX.utils.json_to_sheet(excelData);
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, 'Paid Reports');
-
-    const wbout = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
-    saveAs(
-      new Blob([wbout], { type: "application/octet-stream" }),
-      `${emp.name.replace(/\s+/g, '_')}_paid_reports.xlsx`
-    );
+  // ─── Open / close handlers for various modals ───────────────────────────────
+  const openDetails = emp => {
+    setSelectedEmployee(emp);
+    setIsDetailsModalOpen(true);
+  };
+  const closeDetails = () => {
+    setSelectedEmployee(null);
+    setIsDetailsModalOpen(false);
   };
 
-
-// **Mark Paid (Manager)**:
-  const handleManagerPaidManager = async managerEmp => {
-    // 1) fetch subordinates by supervisorId = managerEmp.companyId
-    const usersQ = query(
-      collection(db, 'users'),
-      where('supervisorId', '==', managerEmp.companyId)
-    );
-    const usersSnap = await getDocs(usersQ);
-    const subordinateIds = usersSnap.docs.map(d => d.id);
-
-    if (!subordinateIds.length) {
-      alert('This manager has no subordinates.');
-      return;
-    }
-
-    // 2) fetch approved reports by those subordinates
-    const reportsQ = query(
-      collection(db, 'reports'),
-      where('userId', 'in', subordinateIds),
-      where('status', '==', 'Approved')
-    );
-    const repSnap = await getDocs(reportsQ);
-    const approved = repSnap.docs.map(d => ({ id: d.id, ...d.data() }));
-
-    if (!approved.length) {
-      alert('No Approved reports to mark paid for this manager.');
-      return;
-    }
-
-    // 3) update each approved report
-    await Promise.all(
-      approved.map(r =>
-        updateDoc(doc(db, 'reports', r.id), { managerCommission: 'paid' })
-      )
-    );
-
-    // 4) build Excel
-    const excelData = approved.map(r => ({
-      'Employee Name':      managerEmp.name,
-      'Employee Company ID': managerEmp.companyId,
-      'Student Name':       r.studentName,
-      'Grade':              r.grade,
-      'Created At':         r.createdAt?.toDate().toLocaleString() || '',
-      'Phone':              r.studentPhone,
-      'WhatsApp':           r.whatsappNumber,
-      'Email':              r.studentEmail,
-      'Course':             r.course,
-      'Status':             r.status,
-      'Manager Commission': 'paid',
-      'Commission (₹)':     500,
-    }));
-
-    const ws = XLSX.utils.json_to_sheet(excelData);
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, 'Manager_Payouts');
-    const wbout = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
-
-    saveAs(
-      new Blob([wbout], { type: 'application/octet-stream' }),
-      `${managerEmp.name.replace(/\s+/g, '_')}_manager_payouts.xlsx`
-    );
+  const openAssignMgr = mgr => {
+    setSelectedManager(mgr);
+    setIsAssignModalOpen(true);
+  };
+  const closeAssignMgr = () => {
+    setSelectedManager(null);
+    setIsAssignModalOpen(false);
   };
 
-
-  const openDetails = emp => { setSelectedEmployee(emp); setIsDetailsModalOpen(true); };
-  const closeDetails = () => { setSelectedEmployee(null); setIsDetailsModalOpen(false); };
-
-const promoteToManager = async (companyId) => {
-    const employee = employees.find((emp) => emp.id === companyId);
-    if (employee?.supervisorId) {
-      alert('Please disengage this employee from their current manager before promoting.');
-      return;
-    }
-  
-    const employeeRef = doc(db, 'users', companyId);
-    await updateDoc(employeeRef, { role: 'manager', supervisorId: null });
-    setEmployees((prev) =>
-      prev.map((emp) =>
-        emp.id === companyId
-          ? { ...emp, role: 'manager', supervisorId: null }
-          : emp
-      )
-    );
+  const openAssignTele = bh => {
+    setSelectedBusinessHead(bh);
+    setIsAssignTeleModalOpen(true);
+  };
+  const closeAssignTele = () => {
+    setSelectedBusinessHead(null);
+    setIsAssignTeleModalOpen(false);
   };
 
-  const handlePromote = async emp => {
-    const promoteMgr = window.confirm(
-      "OK → Promote to Manager\nCancel → Promote to Telecaller"
-    );
-
-    if (promoteMgr) {
-      // existing promote to manager
-      if (emp.supervisorId) {
-        alert('Please disengage this employee before promoting.');
-        return;
-      }
-      const ref = doc(db, 'users', emp.id);
-      await updateDoc(ref, { role: 'manager', supervisorId: null });
-      setEmployees(prev =>
-        prev.map(e =>
-          e.id === emp.id
-            ? { ...e, role: 'manager', supervisorId: null }
-            : e
-        )
-      );
-    } else {
-      // promote to telecaller
-      const ref = doc(db, 'users', emp.id);
-      await updateDoc(ref, { role: 'telecaller' });
-      setEmployees(prev =>
-        prev.map(e => (e.id === emp.id ? { ...e, role: 'telecaller' } : e))
-      );
-    }
+  const openAssignAssoc = am => {
+    setSelectedAssociateManager(am);
+    setIsAssignAssociatesOpen(true);
   };
- 
-
-  const demoteToEmployee = async (companyId) => {
-    const employeeRef = doc(db, 'users', companyId);
-    await updateDoc(employeeRef, { role: 'employee' });
-    setEmployees((prev) =>
-      prev.map((emp) => (emp.id === companyId ? { ...emp, role: 'employee' } : emp))
-    );
+  const closeAssignAssoc = () => {
+    setSelectedAssociateManager(null);
+    setIsAssignAssociatesOpen(false);
   };
 
-  const openAssign = mgr => { setSelectedManager(mgr); setIsAssignModalOpen(true); };
-  const closeAssign = () => { setSelectedManager(null); setIsAssignModalOpen(false); };
+  // ─── NEW: Open / close for AssignBusinessHeadsModal ────────────────────────
+  const openAssignBusinessHeads = sh => {
+    setSelectedSalesHead(sh);
+    setIsAssignBusinessHeadsOpen(true);
+  };
+  const closeAssignBusinessHeads = () => {
+    setSelectedSalesHead(null);
+    setIsAssignBusinessHeadsOpen(false);
+  };
 
-  const assignSubordinates = async (subordinateIds) => {
-    if (!selectedManager || !selectedManager.companyId) {
-      console.error('Selected manager is invalid or missing companyId.');
-      return;
-    }
-  
+  // ─── Assign subordinates to a manager ───────────────────────────────────────
+  const assignSubordinates = async subordinateIds => {
+    if (!selectedManager?.companyId) return;
     const updatedEmployees = [...employees];
-    const managerCompanyId = selectedManager.companyId;
-  
-    // Update subordinates' supervisorId field
+    const mgrCid = selectedManager.companyId;
+
+    // 1) Update each subordinate’s supervisorId
     for (const id of subordinateIds) {
-      const employeeRef = doc(db, 'users', id);
-      const employee = employees.find((emp) => emp.id === id);
-      if (!employee) continue;
-  
-      await updateDoc(employeeRef, { supervisorId: managerCompanyId });
-  
-      const index = updatedEmployees.findIndex((emp) => emp.id === id);
-      if (index !== -1) {
-        updatedEmployees[index].supervisorId = managerCompanyId;
+      const eRef = doc(db, 'users', id);
+      const emp = employees.find(e => e.id === id);
+      if (!emp) continue;
+      await updateDoc(eRef, { supervisorId: mgrCid });
+      const idx = updatedEmployees.findIndex(e => e.id === id);
+      if (idx !== -1) {
+        updatedEmployees[idx].supervisorId = mgrCid;
       }
     }
-  
-    // Update manager's subordinates field
-    const managerRef = doc(db, 'users', selectedManager.id);
-    const subordinateCompanyIds = subordinateIds
-      .map((subId) => employees.find((e) => e.id === subId)?.companyId)
-      .filter((id) => id); // Filter out undefined
-  
-    await updateDoc(managerRef, {
-      subordinates: arrayUnion(...subordinateCompanyIds),
+
+    // 2) Update manager’s subordinates array
+    const mgrRef = doc(db, 'users', selectedManager.id);
+    const subCids = subordinateIds
+      .map(subId => employees.find(e => e.id === subId)?.companyId)
+      .filter(Boolean);
+
+    await updateDoc(mgrRef, {
+      subordinates: arrayUnion(...subCids)
     });
-  
-    const updatedManagerIndex = updatedEmployees.findIndex(
-      (emp) => emp.id === selectedManager.id
-    );
-    if (updatedManagerIndex !== -1) {
-      const existingSubordinates =
-        updatedEmployees[updatedManagerIndex].subordinates || [];
-      updatedEmployees[updatedManagerIndex].subordinates = [
-        ...new Set([...existingSubordinates, ...subordinateCompanyIds]),
-      ];
+
+    const mgrIdx = updatedEmployees.findIndex(e => e.id === selectedManager.id);
+    if (mgrIdx !== -1) {
+      const existing = updatedEmployees[mgrIdx].subordinates || [];
+      updatedEmployees[mgrIdx].subordinates = Array.from(new Set([...existing, ...subCids]));
     }
-  
+
     setEmployees(updatedEmployees);
+    closeAssignMgr();
   };
 
+  // ─── Assign telecallers to a business head ─────────────────────────────────
+  const assignTelecallers = async teleIds => {
+    if (!selectedBusinessHead) return;
+    const bhRef = doc(db, 'users', selectedBusinessHead.id);
+    const teleCids = employees
+      .filter(e => teleIds.includes(e.id))
+      .map(e => e.companyId)
+      .filter(Boolean);
+
+    await updateDoc(bhRef, {
+      telecallers: arrayUnion(...teleCids)
+    });
+
+    setEmployees(prev =>
+      prev.map(e =>
+        e.id === selectedBusinessHead.id
+          ? {
+              ...e,
+              telecallers: Array.from(new Set([...(e.telecallers || []), ...teleCids]))
+            }
+          : e
+      )
+    );
+    closeAssignTele();
+  };
+
+  // ─── Assign associates to an associateManager ───────────────────────────────
+  const assignAssociates = async associateIds => {
+    if (!selectedAssociateManager) return;
+    const amRef = doc(db, 'users', selectedAssociateManager.id);
+    const assocCids = associateIds
+      .map(id => employees.find(e => e.id === id)?.companyId)
+      .filter(Boolean);
+
+    await updateDoc(amRef, {
+      associates: arrayUnion(...assocCids)
+    });
+
+    // Set each associate’s associateManager field
+    await Promise.all(
+      associateIds.map(id => {
+        const eRef = doc(db, 'users', id);
+        return updateDoc(eRef, { associateManager: selectedAssociateManager.companyId });
+      })
+    );
+
+    setEmployees(prev =>
+      prev.map(e => {
+        if (e.id === selectedAssociateManager.id) {
+          const existing = e.associates || [];
+          return {
+            ...e,
+            associates: Array.from(new Set([...existing, ...assocCids]))
+          };
+        }
+        if (associateIds.includes(e.id)) {
+          return { ...e, associateManager: selectedAssociateManager.companyId };
+        }
+        return e;
+      })
+    );
+    closeAssignAssoc();
+  };
+
+  // ─── Assign business heads to a sales head ────────────────────────────────
+  const assignBusinessHeads = async bhIds => {
+    if (!selectedSalesHead) return;
+    const shRef = doc(db, 'users', selectedSalesHead.id);
+    const bhCids = bhIds
+      .map(id => employees.find(e => e.id === id)?.companyId)
+      .filter(Boolean);
+
+    await updateDoc(shRef, {
+      myBusinessHeads: arrayUnion(...bhCids)
+    });
+
+    // Optionally set each BH’s salesHead field
+    await Promise.all(
+      bhIds.map(id => {
+        const ref = doc(db, 'users', id);
+        return updateDoc(ref, { salesHead: selectedSalesHead.companyId });
+      })
+    );
+
+    setEmployees(prev =>
+      prev.map(e => {
+        if (e.id === selectedSalesHead.id) {
+          const existing = e.myBusinessHeads || [];
+          return {
+            ...e,
+            myBusinessHeads: Array.from(new Set([...existing, ...bhCids]))
+          };
+        }
+        if (bhIds.includes(e.id)) {
+          return { ...e, salesHead: selectedSalesHead.companyId };
+        }
+        return e;
+      })
+    );
+    closeAssignBusinessHeads();
+  };
+
+  // ─── Demote a manager back to “employee” ───────────────────────────────────
+  const demoteToEmployee = async uid => {
+    const ref = doc(db, 'users', uid);
+    await updateDoc(ref, { role: 'employee' });
+    setEmployees(prev =>
+      prev.map(e => (e.id === uid ? { ...e, role: 'employee' } : e))
+    );
+  };
+
+  // ─── Helper: change companyId prefix for promotions ────────────────────────
+  function withNewPrefix(oldCid, newPrefix) {
+    // oldCid format: “YSA-XX-####”
+    const parts = oldCid.split('-');
+    const suffix = parts[2] || '0000';
+    return `YSA-${newPrefix}-${suffix}`;
+  }
+
+  // ─── RENDER ────────────────────────────────────────────────────────────────
   return (
     <div className="min-h-screen bg-gray-50 p-6">
-      <br />
-      <br />
+      <br /><br />
       <h2 className="text-2xl font-bold text-gray-800 mb-6">
         Employee Management
       </h2>
@@ -340,7 +314,7 @@ const promoteToManager = async (companyId) => {
         <table className="min-w-full divide-y divide-gray-200">
           <thead className="bg-gray-100">
             <tr>
-              {['Name','Role','Company ID','Supervisor','Actions'].map(h => (
+              {['Name','Role','Consultant ID','Supervisor','Actions'].map(h => (
                 <th
                   key={h}
                   className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
@@ -368,6 +342,7 @@ const promoteToManager = async (companyId) => {
                     : 'None'}
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 space-x-2">
+                  {/* View Details */}
                   <button
                     type="button"
                     onClick={() => openDetails(emp)}
@@ -376,55 +351,58 @@ const promoteToManager = async (companyId) => {
                     View
                   </button>
 
+                  {/* DISENGAGE */}
+                  {['employee','associate','businessDevelopmentConsultant'].includes(emp.role) && emp.supervisorId && (
+                    <button
+                      onClick={() => disengageEmployee(emp)}
+                      className="px-3 py-1 bg-red-500 text-white rounded hover:bg-red-600"
+                    >
+                      Disengage
+                    </button>
+                  )}
+
+                  {/* If Telecaller, show “Assign Managers” */}
                   {emp.role === 'telecaller' && (
-  <button
-    className="px-3 py-1 bg-blue-500 text-white rounded hover:bg-blue-600"
-    onClick={() => navigate(`/assign-managers/${emp.id}`)}
-  >
-    Assign Managers
-  </button>
-)}
+                    <button
+                      className="px-3 py-1 bg-blue-500 text-white rounded hover:bg-blue-600"
+                      onClick={() => navigate(`/assign-managers/${emp.id}`)}
+                    >
+                      Assign Team Leads
+                    </button>
+                  )}
 
+                  {/* PROMOTE buttons for employee / associate / bdc */}
+                  {['employee','associate','businessDevelopmentConsultant'].includes(emp.role) && (
+                    <button
+                      type="button"
+                      onClick={() => setPromoteTarget(emp)}
+                      className="px-3 py-1 bg-green-500 text-white rounded hover:bg-green-600"
+                    >
+                      Promote
+                    </button>
+                  )}
 
-                  <button
-                    type="button"
-                    onClick={() => handlePaid(emp)}
-                    className="px-3 py-1 bg-green-500 text-white rounded hover:bg-green-600"
-                  >
-                    Mark Paid
-                  </button>
-
-                 {emp.role === 'employee' && (
-   <button
-     type="button"
-     onClick={() => setPromoteTarget(emp)}
-     className="px-3 py-1 bg-green-500 text-white rounded hover:bg-green-600"
-   >
-     Promote
-   </button>
- )}
-
+                  {/* If Telecaller, allow Demote */}
                   {emp.role === 'telecaller' && (
-  <button
-    type="button"
-    onClick={async () => {
-      const empRef = doc(db, 'users', emp.id);
-      await updateDoc(empRef, { role: 'employee' });
-      setEmployees(prev =>
-        prev.map(e =>
-          e.id === emp.id
-            ? { ...e, role: 'employee' }
-            : e
-        )
-      );
-    }}
-    className="px-3 py-1 bg-yellow-500 text-white rounded hover:bg-yellow-600"
-  >
-    Demote
-  </button>
-)}
+                    <button
+                      type="button"
+                      onClick={async () => {
+                        const ref = doc(db, 'users', emp.id);
+                        await updateDoc(ref, { role: 'employee' });
+                        setEmployees(prev =>
+                          prev.map(e =>
+                            e.id === emp.id ? { ...e, role: 'employee' } : e
+                          )
+                        );
+                      }}
+                      className="px-3 py-1 bg-yellow-500 text-white rounded hover:bg-yellow-600"
+                    >
+                      Demote
+                    </button>
+                  )}
 
-                  {emp.role === 'manager' &&  (
+                  {/* If Manager, allow Demote + Assign Subordinates */}
+                  {emp.role === 'manager' && (
                     <>
                       <button
                         type="button"
@@ -435,27 +413,34 @@ const promoteToManager = async (companyId) => {
                       </button>
                       <button
                         type="button"
-                        onClick={() => openAssign(emp)}
+                        onClick={() => openAssignMgr(emp)}
                         className="px-3 py-1 bg-indigo-500 text-white rounded hover:bg-indigo-600"
                       >
                         Assign
                       </button>
-                      <button
-                        onClick={() => handleManagerPaidManager(emp)}
-                        className="px-3 py-1 bg-purple-600 text-white rounded hover:bg-purple-700"
-                      >
-                        Mark Paid (Mgr)
-                      </button>
                     </>
                   )}
 
-                  {emp.supervisorId && (
+                  {/* If Business Head, allow “Assign Telecallers” */}
+                  {emp.role === 'businessHead' && (
+                    <button
+                      onClick={() => openAssignTele(emp)}
+                      className="px-3 py-1 bg-teal-500 text-white rounded hover:bg-teal-600"
+                    >
+                      Assign Telecallers
+                    </button>
+                  )}
+
+                 
+
+                  {/* If Sales Head, allow Assign Business Heads */}
+                  {emp.role === 'salesHead' && (
                     <button
                       type="button"
-                      onClick={() => disengageEmployee(emp)}
-                      className="px-3 py-1 bg-red-500 text-white rounded hover:bg-red-600"
+                      onClick={() => openAssignBusinessHeads(emp)}
+                      className="px-3 py-1 bg-pink-600 text-white rounded hover:bg-pink-700"
                     >
-                      Disengage
+                      Assign Senior Managers
                     </button>
                   )}
                 </td>
@@ -471,7 +456,8 @@ const promoteToManager = async (companyId) => {
         employee={selectedEmployee}
         employees={employees}
       />
-            {/* ─── Promote Modal ─────────────────────────────────── */}
+
+      {/* ─── Promote Modal ────────────────────────────────────────────────── */}
       <Modal
         isOpen={!!promoteTarget}
         onRequestClose={() => setPromoteTarget(null)}
@@ -483,40 +469,195 @@ const promoteToManager = async (companyId) => {
         </h3>
         <div className="flex flex-col space-y-3">
           <button
-  onClick={async () => {
-    const empRef = doc(db, 'users', promoteTarget.id);
-    // 1) Update Firestore
-    await updateDoc(empRef, { role: 'manager', supervisorId: null });
+            onClick={async () => {
+              // Promote → Manager (prefix TL)
+              const oldCid = promoteTarget.companyId;
+              const newCid = withNewPrefix(oldCid, 'TL');
+              const ref = doc(db, 'users', promoteTarget.id);
 
-    // 2) Update local React state so the table re-renders correctly
-    setEmployees(prev =>
-      prev.map(e =>
-        e.id === promoteTarget.id
-          ? { ...e, role: 'manager', supervisorId: null }
-          : e
-      )
-    );
+              // 1) Update Firestore:
+              await updateDoc(ref, {
+                role: 'manager',
+                companyId: newCid,
+                supervisorId: null
+              });
 
-    // 3) Close the modal
-    setPromoteTarget(null);
-  }}
-  className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700"
->
-  Promote to Manager
-</button>
+              // 2) If they had a supervisor, update that manager’s subordinates:
+              if (promoteTarget.supervisorId) {
+                const oldMgr = employees.find(e => e.companyId === promoteTarget.supervisorId);
+                if (oldMgr) {
+                  const oldMgrRef = doc(db, 'users', oldMgr.id);
+                  await updateDoc(oldMgrRef, {
+                    subordinates: arrayRemove(oldCid),
+                  });
+                  await updateDoc(oldMgrRef, {
+                    subordinates: arrayUnion(newCid),
+                  });
+                }
+              }
+
+              // 3) Update local state for this user & the old manager:
+              setEmployees(prev =>
+                prev.map(e => {
+                  if (e.id === promoteTarget.id) {
+                    const copy = { ...e };
+                    copy.role = 'manager';
+                    copy.companyId = newCid;
+                    delete copy.supervisorId;
+                    return copy;
+                  }
+                  if (e.companyId === promoteTarget.supervisorId) {
+                    return {
+                      ...e,
+                      subordinates: e.subordinates
+                        .filter(cid => cid !== oldCid)
+                        .concat([newCid])
+                    };
+                  }
+                  return e;
+                })
+              );
+
+              setPromoteTarget(null);
+            }}
+            className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700"
+          >
+            Promote to Team Lead
+          </button>
 
           <button
             onClick={async () => {
-              // Promote to telecaller
-              const empRef = doc(db, 'users', promoteTarget.id);
-              await updateDoc(empRef, { role: 'telecaller' });
-              // update local state if needed...
+              // Promote → Telecaller (prefix TC)
+              const oldCid = promoteTarget.companyId;
+              const newCid = withNewPrefix(oldCid, 'TC');
+              const ref = doc(db, 'users', promoteTarget.id);
+              await updateDoc(ref, { role: 'telecaller', companyId: newCid });
+
+              // Update old manager’s subordinates if needed:
+              if (promoteTarget.supervisorId) {
+                const oldMgr = employees.find(e => e.companyId === promoteTarget.supervisorId);
+                if (oldMgr) {
+                  const oldMgrRef = doc(db, 'users', oldMgr.id);
+                  await updateDoc(oldMgrRef, {
+                    subordinates: arrayRemove(oldCid),
+                  });
+                  await updateDoc(oldMgrRef, {
+                    subordinates: arrayUnion(newCid),
+                  });
+                }
+              }
+
+              setEmployees(prev =>
+                prev.map(e => {
+                  if (e.id === promoteTarget.id) {
+                    return { ...e, role: 'telecaller', companyId: newCid };
+                  }
+                  if (e.companyId === promoteTarget.supervisorId) {
+                    return {
+                      ...e,
+                      subordinates: e.subordinates
+                        .filter(cid => cid !== oldCid)
+                        .concat([newCid])
+                    };
+                  }
+                  return e;
+                })
+              );
               setPromoteTarget(null);
             }}
             className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
           >
-            Promote to Telecaller
+            Promote to Telecaller/Manger-Sales
           </button>
+
+          <button
+            onClick={async () => {
+              // Promote → Business Head (prefix SM)
+              const oldCid = promoteTarget.companyId;
+              const newCid = withNewPrefix(oldCid, 'SM');
+              const ref = doc(db, 'users', promoteTarget.id);
+              await updateDoc(ref, { role: 'businessHead', companyId: newCid });
+
+              if (promoteTarget.supervisorId) {
+                const oldMgr = employees.find(e => e.companyId === promoteTarget.supervisorId);
+                if (oldMgr) {
+                  const oldMgrRef = doc(db, 'users', oldMgr.id);
+                  await updateDoc(oldMgrRef, {
+                    subordinates: arrayRemove(oldCid),
+                  });
+                  await updateDoc(oldMgrRef, {
+                    subordinates: arrayUnion(newCid),
+                  });
+                }
+              }
+
+              setEmployees(prev =>
+                prev.map(e => {
+                  if (e.id === promoteTarget.id) {
+                    return { ...e, role: 'businessHead', companyId: newCid };
+                  }
+                  if (e.companyId === promoteTarget.supervisorId) {
+                    return {
+                      ...e,
+                      subordinates: e.subordinates
+                        .filter(cid => cid !== oldCid)
+                        .concat([newCid])
+                    };
+                  }
+                  return e;
+                })
+              );
+              setPromoteTarget(null);
+            }}
+            className="px-4 py-2 bg-yellow-600 text-white rounded hover:bg-yellow-700"
+          >
+            Promote to Senior Manager
+          </button>
+
+          <button
+            onClick={async () => {
+              // Promote → Sales Head (prefix SH)
+              const oldCid = promoteTarget.companyId;
+              const newCid = withNewPrefix(oldCid, 'SH');
+              const ref = doc(db, 'users', promoteTarget.id);
+              await updateDoc(ref, { role: 'salesHead', companyId: newCid });
+
+              if (promoteTarget.supervisorId) {
+                const oldMgr = employees.find(e => e.companyId === promoteTarget.supervisorId);
+                if (oldMgr) {
+                  const oldMgrRef = doc(db, 'users', oldMgr.id);
+                  await updateDoc(oldMgrRef, {
+                    subordinates: arrayRemove(oldCid),
+                  });
+                  await updateDoc(oldMgrRef, {
+                    subordinates: arrayUnion(newCid),
+                  });
+                }
+              }
+
+              setEmployees(prev =>
+                prev.map(e => {
+                  if (e.id === promoteTarget.id) {
+                    return { ...e, role: 'salesHead', companyId: newCid };
+                  }
+                  if (e.companyId === promoteTarget.supervisorId) {
+                    return {
+                      ...e,
+                      subordinates: e.subordinates
+                        .filter(cid => cid !== oldCid)
+                        .concat([newCid])
+                    };
+                  }
+                  return e;
+                })
+              );
+              setPromoteTarget(null);
+            }}
+            className="px-4 py-2 bg-pink-600 text-white rounded hover:bg-pink-700"
+          >
+            Promote to Sales Head
+          </button>
+
           <button
             onClick={() => setPromoteTarget(null)}
             className="mt-4 text-gray-600 hover:underline self-end"
@@ -526,14 +667,49 @@ const promoteToManager = async (companyId) => {
         </div>
       </Modal>
 
-
+      {/* ─── AssignSubordinatesModal ───────────────────────────────────────────── */}
       {selectedManager && (
         <AssignSubordinatesModal
           isOpen={isAssignModalOpen}
-          onRequestClose={closeAssign}
+          onRequestClose={closeAssignMgr}
           manager={selectedManager}
           employees={employees}
           onAssign={assignSubordinates}
+        />
+      )}
+
+      {/* ─── AssignTelecallersModal ───────────────────────────────────────────── */}
+      {selectedBusinessHead && (
+        <AssignTelecallersModal
+          isOpen={isAssignTeleModalOpen}
+          onRequestClose={closeAssignTele}
+          businessHead={selectedBusinessHead}
+          telecallers={employees.filter(e => e.role === 'telecaller')}
+          onAssign={assignTelecallers}
+        />
+      )}
+
+      {/* ─── AssignAssociatesModal ───────────────────────────────────────────── */}
+      {selectedAssociateManager && (
+        <AssignSubordinatesModal
+          isOpen={isAssignAssociatesOpen}
+          onRequestClose={closeAssignAssoc}
+          manager={selectedAssociateManager}
+          employees={employees.filter(e =>
+            ['associate'].includes(e.role)
+          )}
+          onAssign={assignAssociates}
+        />
+      )}
+
+      {/* ─── NEW: AssignBusinessHeadsModal ────────────────────────────────────── */}
+      {selectedSalesHead && (
+        <AssignBusinessHeadsModal
+          isOpen={isAssignBusinessHeadsOpen}
+          onRequestClose={closeAssignBusinessHeads}
+          salesHead={selectedSalesHead}
+          businessHeads={employees.filter(e => e.role === 'businessHead')}
+          onAssign={assignBusinessHeads}
         />
       )}
     </div>

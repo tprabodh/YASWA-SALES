@@ -1,4 +1,3 @@
-// src/pages/MyReportsPage.jsx
 import React, { useEffect, useState } from 'react';
 import { db } from '../firebase';
 import {
@@ -6,184 +5,190 @@ import {
   query,
   where,
   onSnapshot,
-  getDocs,
   deleteDoc,
   doc,
 } from 'firebase/firestore';
 import useAuth from '../hooks/UseAuth';
+import { useUserProfile } from '../hooks/useUserProfile';
 import { useNavigate } from 'react-router-dom';
 import DateRangePicker from '../Components/DateRangePicker';
 
 export default function MyReportsPage() {
-  const { user, loading } = useAuth();
+  const { user, loading: authLoading } = useAuth();
+  const { profile, loading: profileLoading } = useUserProfile();
   const navigate = useNavigate();
   const [allReports, setAllReports] = useState([]);
-
-  // ⏳ Filter state
   const [dateType, setDateType] = useState('today');
   const [customRange, setCustomRange] = useState({ start: null, end: null });
 
   useEffect(() => {
-    if (loading || !user) return;
-
+    if (authLoading || profileLoading || !user) return;
     const q = query(
       collection(db, 'reports'),
       where('userId', '==', user.uid)
     );
-
     const unsub = onSnapshot(q, async (snap) => {
-      const reportsData = snap.docs.map((doc) => ({
-        id: doc.id,
-        ...doc.data(),
-      }));
-
-      const uniqueCompanyIds = [
-        ...new Set(reportsData.map((r) => r.companyId).filter(Boolean)),
-      ];
-
-      const companyIdToName = {};
-      await Promise.all(
-        uniqueCompanyIds.map(async (companyId) => {
-          const usersQuery = query(
-            collection(db, 'users'),
-            where('companyId', '==', companyId)
-          );
-          const usersSnap = await getDocs(usersQuery);
-          if (!usersSnap.empty) {
-            const userDoc = usersSnap.docs[0];
-            companyIdToName[companyId] = userDoc.data().name || 'N/A';
-          } else {
-            companyIdToName[companyId] = 'N/A';
-          }
+      const reportsData = await Promise.all(
+        snap.docs.map(async (docSnap) => {
+          const data = docSnap.data();
+          return { id: docSnap.id, ...data };
         })
       );
-
-      const augmentedReports = reportsData.map((report) => ({
-        ...report,
-        employeeName: companyIdToName[report.companyId] || 'N/A',
-      }));
-
-      setAllReports(augmentedReports);
+      setAllReports(reportsData);
     });
-
     return () => unsub();
-  }, [user, loading]);
+  }, [authLoading, profileLoading, user]);
+
+  if (authLoading || profileLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-gradient-to-r from-purple-500 to-indigo-600">
+        <p className="text-gray-100 text-xl">Loading…</p>
+      </div>
+    );
+  }
+
+  if (!profile) {
+    return (
+      <div className="p-6 text-red-500 bg-yellow-100 rounded-lg shadow-lg">
+        Error loading your profile. Please try again.
+      </div>
+    );
+  }
+
+  const getFilteredReports = () => {
+    const now = new Date();
+    let start, end;
+
+    if (dateType === 'today') {
+      start = new Date(now);
+      start.setHours(0, 0, 0, 0);
+      end = new Date(now);
+      end.setHours(23, 59, 59, 999);
+    } else if (dateType === 'yesterday') {
+      const yd = new Date(now);
+      yd.setDate(yd.getDate() - 1);
+      start = new Date(yd);
+      start.setHours(0, 0, 0, 0);
+      end = new Date(yd);
+      end.setHours(23, 59, 59, 999);
+    } else if (dateType === 'thisWeek') {
+      const day = now.getDay();
+      const diffToMon = (day + 6) % 7;
+      const mon = new Date(now);
+      mon.setDate(mon.getDate() - diffToMon);
+      start = new Date(mon);
+      start.setHours(0, 0, 0, 0);
+      end = new Date(mon);
+      end.setDate(mon.getDate() + 6);
+      end.setHours(23, 59, 59, 999);
+    } else if (dateType === 'thisMonth') {
+      start = new Date(now.getFullYear(), now.getMonth(), 1);
+      start.setHours(0, 0, 0, 0);
+      end = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+      end.setHours(23, 59, 59, 999);
+    } else if (dateType === 'custom' && customRange.start instanceof Date && customRange.end instanceof Date) {
+      start = customRange.start;
+      end = customRange.end;
+    } else {
+      start = new Date(0);
+      end = now;
+    }
+
+    return allReports.filter((r) => {
+      const d = r.createdAt?.toDate?.();
+      return d instanceof Date && d >= start && d <= end;
+    });
+  };
+
+  const reports = getFilteredReports();
 
   const handleDelete = async (id) => {
     if (!window.confirm('Delete this report?')) return;
     await deleteDoc(doc(db, 'reports', id));
   };
 
-  // 📆 Compute timestamp range for filtering
-  const getFilteredReports = () => {
-    if (dateType === 'allTime') return allReports;
-
-    let start, end;
-    const now = new Date();
-    if (dateType === 'today') {
-      start = new Date(); start.setHours(0, 0, 0, 0);
-      end = new Date(); end.setHours(23, 59, 59, 999);
-    } else if (dateType === 'last7') {
-      start = new Date(now - 6 * 864e5);
-      end = now;
-    } else if (dateType === 'last30') {
-      start = new Date(now - 29 * 864e5);
-      end = now;
-    } else if (dateType === 'custom' && customRange.start && customRange.end) {
-      start = customRange.start;
-      end = customRange.end;
-    } else {
-      return allReports;
-    }
-
-    return allReports.filter((r) => {
-      const createdAt = r.createdAt?.toDate?.();
-      return createdAt && createdAt >= start && createdAt <= end;
-    });
-  };
-
-  const reports = getFilteredReports();
-
-  if (loading) return <div>Loading…</div>;
-
   return (
-    <div className="min-h-screen bg-white p-6 text-black">
-      <br />
-      <br />
-      <h2 className="text-2xl font-bold mb-4">My Reports</h2>
+    <div className="min-h-screen bg-white p-8 text-black">
+      <br /><br />
+      <h2 className="text-4xl font-extrabold text-gray-800 mb-6">
+        Hi {profile.name} ({profile.companyId}) — Your Sales Report Status
+      </h2>
 
-      {/* 🔄 Date Picker */}
-      <div className="mb-4 max-w-md">
+      <div className="mb-8 max-w-lg mx-auto bg-white p-6 rounded-lg shadow-lg">
         <DateRangePicker
           value={dateType}
           onChangeType={setDateType}
           customRange={customRange}
-          onChangeCustom={(delta) =>
-            setCustomRange((prev) => ({ ...prev, ...delta }))
-          }
+          onChangeCustom={(delta) => setCustomRange((prev) => ({ ...prev, ...delta }))}
         />
       </div>
 
-      <div className="overflow-x-auto bg-white rounded-lg shadow">
-        <table className="min-w-full table-auto">
-          <thead className="bg-gray-100">
+      <div className="overflow-x-auto bg-white rounded-lg shadow-lg">
+        <table className="min-w-full table-auto bg-gradient-to-r from-purple-100 to-indigo-50">
+          <thead className="bg-gray-300">
             <tr>
-              {[
-                'Student Name',
-                'Course Purchased',
-                'Status',
-                'Employee Name',
-                'Company ID',
-                'Actions',
-              ].map((header) => (
-                <th
-                  key={header}
-                  className="px-6 py-3 text-left text-sm font-semibold"
-                >
-                  {header}
-                </th>
-              ))}
+              {['S No.', 'Student Name', 'Student Phone', 'Course Purchased', 'Purchased Date', 'Status', 'Actions'].map(
+                (header) => (
+                  <th
+                    key={header}
+                    className="px-6 py-3 text-left text-lg font-semibold text-gray-600 tracking-wide"
+                  >
+                    {header}
+                  </th>
+                )
+              )}
             </tr>
           </thead>
           <tbody>
-            {reports.map((r, i) => (
-              <tr
-                key={r.id}
-                className={`${i % 2 === 0 ? 'bg-gray-50' : 'bg-white'} hover:bg-gray-100`}
-              >
-                <td className="px-6 py-4">{r.studentName}</td>
-                <td className="px-6 py-4">{r.course}</td>
-                <td className="px-6 py-4">{r.status}</td>
-                <td className="px-6 py-4">{r.employeeName}</td>
-                <td className="px-6 py-4">{r.companyId}</td>
-                <td className="px-6 py-4 space-x-2">
-                  <button
-                    className="bg-blue-500 hover:bg-blue-600 text-white text-xs px-3 py-1 rounded"
-                    onClick={() =>
-                      navigate(`/view/${r.id}`, { state: { from: 'reports' } })
-                    }
-                  >
-                    View
-                  </button>
-                  <button
-                    className="bg-yellow-500 hover:bg-yellow-600 text-white text-xs px-3 py-1 rounded"
-                    onClick={() => navigate(`/submit/${r.id}`)}
-                  >
-                    Edit
-                  </button>
-                  <button
-                    className="bg-red-500 hover:bg-red-600 text-white text-xs px-3 py-1 rounded"
-                    onClick={() => handleDelete(r.id)}
-                  >
-                    Delete
-                  </button>
-                </td>
-              </tr>
-            ))}
+            {reports.map((r, i) => {
+              const isPending = r.status.toLowerCase() === 'pending';
+              return (
+                <tr key={r.id} className={`${i % 2 === 0 ? 'bg-gray-50' : 'bg-white'} hover:bg-indigo-50`}>
+                  <td className="px-6 py-4 text-lg">{i + 1}</td>
+                  <td className="px-6 py-4">{r.studentName}</td>
+                  <td className="px-6 py-4">{r.studentPhone}</td>
+                  <td className="px-6 py-4">{r.course}</td>
+                  <td className="px-6 py-4">
+                    {r.createdAt ? r.createdAt.toDate().toLocaleDateString() : '—'}
+                  </td>
+                  <td className="px-6 py-4">{r.status}</td>
+                  <td className="px-6 py-4 space-x-2">
+                    <button
+                      onClick={() => navigate(`/view/${r.id}`, { state: { from: 'reports' } })}
+                      className="bg-indigo-500 hover:bg-indigo-600 text-white text-sm px-4 py-2 rounded-full transition-all duration-300 transform hover:scale-105"
+                    >
+                      View
+                    </button>
+                    <button
+                      disabled={!isPending}
+                      onClick={() => isPending && navigate(`/submit/${r.id}`)}
+                      className={`text-sm px-4 py-2 rounded-full transition-all duration-300 transform hover:scale-105 ${
+                        isPending
+                          ? 'bg-yellow-400 hover:bg-yellow-500 text-white'
+                          : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                      }`}
+                    >
+                      Edit
+                    </button>
+                    <button
+                      disabled={!isPending}
+                      onClick={() => handleDelete(r.id)}
+                      className={`text-sm px-4 py-2 rounded-full transition-all duration-300 transform hover:scale-105 ${
+                        isPending
+                          ? 'bg-red-500 hover:bg-red-600 text-white'
+                          : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                      }`}
+                    >
+                      Delete
+                    </button>
+                  </td>
+                </tr>
+              );
+            })}
             {reports.length === 0 && (
               <tr>
-                <td colSpan="6" className="px-6 py-4 text-center text-gray-500">
-                  No reports found for this date range.
+                <td colSpan="7" className="px-6 py-4 text-center text-gray-500">
+                  No reports found.
                 </td>
               </tr>
             )}

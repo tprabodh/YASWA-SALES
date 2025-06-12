@@ -1,96 +1,72 @@
 // src/Components/AssignSubordinatesModal.jsx
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Modal from 'react-modal';
 
-Modal.setAppElement('#root');
-
+// PROPS:
+//   isOpen, onRequestClose, manager, employees (array of user objects), onAssign([...ids])
 export default function AssignSubordinatesModal({
   isOpen,
   onRequestClose,
   manager,
-  employees,
+  employees,      // <-- we will use this directly
   onAssign,
 }) {
-  const [searchQuery, setSearchQuery] = useState('');
-  const [selectedSubordinates, setSelectedSubordinates] = useState([]);
+  const [selectedIds, setSelectedIds] = useState([]);
 
-  const filteredEmployees = employees.filter(
-    (emp) =>
-      emp.role === 'employee' &&
-      emp.name.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  // Whenever the modal opens, clear any selection
+  useEffect(() => {
+    if (isOpen) setSelectedIds([]);
+  }, [isOpen]);
 
-  const toggleSelection = (id) => {
-    setSelectedSubordinates((prev) =>
-      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]
+  // Helper to toggle one checkbox
+  const toggleId = (uid) => {
+    setSelectedIds(prev => 
+      prev.includes(uid) ? prev.filter(x => x !== uid) : [...prev, uid]
     );
-  };
-
-  const handleAssign = () => {
-    onAssign(selectedSubordinates);
-    setSelectedSubordinates([]);
-    setSearchQuery('');
-    onRequestClose();
   };
 
   return (
     <Modal
       isOpen={isOpen}
       onRequestClose={onRequestClose}
-      overlayClassName="fixed inset-0 bg-black/50 flex items-center justify-center z-50"
-      className="bg-white rounded-xl shadow-lg w-full max-w-md mx-4 p-6 outline-none"
+      className="bg-white p-6 mx-auto mt-20 max-w-lg rounded shadow-lg outline-none"
+      overlayClassName="fixed inset-0 bg-black bg-opacity-30 flex items-start justify-center"
     >
-      <h2 className="text-xl font-semibold text-[#8a1ccf] mb-4">
-        Assign Subordinates to {manager.name}
-      </h2>
-
-      <input
-        type="text"
-        placeholder="Search employees..."
-        value={searchQuery}
-        onChange={(e) => setSearchQuery(e.target.value)}
-        className="w-full mb-4 px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-[#8a1ccf]"
-      />
-
-      <ul className="max-h-60 overflow-y-auto space-y-2 mb-4">
-        {filteredEmployees.map((emp) => (
-          <li
-            key={emp.id}
-            className="flex justify-between items-center p-2 border rounded-md"
-          >
-            <div>
-              <p className="font-medium">{emp.name}</p>
-              <p className="text-xs text-gray-500">{emp.email}</p>
+      <h3 className="text-lg font-semibold mb-4">
+        Assign Subordinates to {manager.name} ({manager.companyId})
+      </h3>
+      <div className="max-h-64 overflow-y-auto border p-2">
+        {employees.length === 0 ? (
+          <p className="text-gray-500">No users available to assign.</p>
+        ) : (
+          employees.map(user => (
+            <div key={user.id} className="flex items-center mb-2">
+              <input
+                type="checkbox"
+                checked={selectedIds.includes(user.id)}
+                onChange={() => toggleId(user.id)}
+                className="mr-2"
+              />
+              <span>
+                {user.name} ({user.companyId}) &mdash; {user.role}
+              </span>
             </div>
-            <button
-              onClick={() => toggleSelection(emp.id)}
-              className={`px-2 py-1 text-xs rounded ${
-                selectedSubordinates.includes(emp.id)
-                  ? 'bg-red-500 text-white hover:bg-red-600'
-                  : 'bg-green-500 text-white hover:bg-green-600'
-              } transition`}
-            >
-              {selectedSubordinates.includes(emp.id)
-                ? 'Remove'
-                : 'Add'}
-            </button>
-          </li>
-        ))}
-      </ul>
-
-      <div className="flex justify-end space-x-3">
+          ))
+        )}
+      </div>
+      <div className="mt-4 flex justify-end space-x-2">
         <button
           onClick={onRequestClose}
-          className="px-4 py-2 bg-gray-300 text-gray-700 rounded hover:bg-gray-400 transition"
+          className="px-4 py-2 bg-gray-300 rounded hover:bg-gray-400"
         >
           Cancel
         </button>
         <button
-          onClick={handleAssign}
-          disabled={!selectedSubordinates.length}
-          className="px-4 py-2 bg-[#8a1ccf] text-white rounded hover:bg-[#7a1bbf] transition disabled:opacity-50"
+          onClick={() => onAssign(selectedIds)}
+          disabled={selectedIds.length === 0}
+          className="px-4 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700 disabled:opacity-50"
         >
-          Assign
+          Assign ({selectedIds.length})
         </button>
       </div>
     </Modal>

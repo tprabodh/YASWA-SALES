@@ -19,6 +19,29 @@ import TelecallerDashboardPage from './pages/TelecallerDashboardPage';
 import PaymentHistoryPage from './pages/PaymentHistoryPage';
 import ManagerPaymentHistoryPage from './pages/ManagerPaymentHistoryPage';
 import ManagerPaidReportsPage from './pages/ManagerPaidReportsPage';
+import ManagerPaymentBreakupPage from './pages/ManagerPaymentBreakupPage';
+import ManagerUnpaidCommissionPage from './pages/ManagerUnpaidCommissionPage';
+import BusinessHeadView from './pages/BusinessHeadView';
+import AdminBusinessHeadSummaryPage from './pages/AdminBusinessHeadSummaryPage';
+import ForecastPage from './pages/ForecastPage';
+import ForecastInputPage from './pages/ForecastInputPage';
+import ProfilePage from './pages/ProfilePage';
+import AssociateManagersView from './pages/AssociateManagerView';
+import AdminAssociateManagerSummaryPage from './pages/AdminAssociateManagerSummaryPage';
+import AdminPaymentHistoryPage from './pages/AdminPaymentHistoryPage';
+import AdminAssociatePaymentHistoryPage from './pages/AdminAssociatePaymentHistoryPage';
+import UploadDesignPage from './pages/UploadDesignPage';
+import AssociatePaymentHistoryPage from './pages/AssociatePaymentHistoryPage';
+import AssociatePaymentHistoryDetailPage from './pages/AssociatePaymentHistoryDetailPage';
+import AssociateManagerTeamPaymentHistoryPage from './pages/AssociateManagerTeamPaymentHistoryPage';
+import AssociateManagerTeamBreakupPage from './pages/AssociateManagerTeamBreakupPage';
+import DownloadsPage from './pages/DownloadsPage';
+import BulletinInputPage from './pages/BulletinInputPage';
+import BulletinPage from './pages/BulletinPage';
+import MyBusinessHeadsPage from './pages/MyBusinessHeadsPage';
+import BDCReportFormPage from './pages/BDCReportFormPage';
+import UploadPDFTemplatePage from './pages/UploadPDFTemplatePage';
+import ManagerSummaryPage from './pages/ManagerSummaryPage';
 
 
 
@@ -34,6 +57,7 @@ function App() {
           <Route element={<ProtectedLayout />}>
 
           <Route path="submit/:id?" element={<ReportFormPage />} />
+          <Route path="/profile" element={<ProfilePage />} />
           <Route path="reports"    element={<MyReportsPage />} />
           <Route path="view/:id"    element={<ViewReportPage />} />
           <Route path="admin"       element={<AdminDashboardPage />} />
@@ -41,14 +65,57 @@ function App() {
           <Route path="admin/employee-summary/:uid" element={<EmployeeSummaryDetailPage />}/>
           <Route path="/manager" element={<ManagerDashboardPage />} />
           <Route path="/summary/:userId"element={<EmployeeDailyReportsPage hideApprove={true} />}/>
-          
           <Route path="/assign-managers/:teleId" element={<AssignManagersPage />} />
             <Route path="/telecaller" element={<TelecallerDashboardPage />} />
             <Route path="payment-history" element={<PaymentHistoryPage />} />
             <Route path="manager-payment-history" element={<ManagerPaymentHistoryPage />} />
             <Route path="manager/paid-reports" element={<ManagerPaidReportsPage />} />
-   
+            <Route path="/admin/businesshead-summary" element={<AdminBusinessHeadSummaryPage />} />
+            <Route path="/forecast" element={<ForecastPage />} />
+                        <Route path="/associatemanagerview" element={<AssociateManagersView />} />
+                         <Route path="/admin/associate-manager-summary" element={<AdminAssociateManagerSummaryPage />} />
+                                   <Route path="/telecaller/manager-summary/:uid" element={<ManagerSummaryPage />}/>
+            <Route path="/forecast-input" element={<ForecastInputPage />} />
+            <Route path="/admin/upload-designs" element={<UploadDesignPage />} />
+             <Route path="/downloads" element={<DownloadsPage />} />
+               <Route path="/admin/bulletin-input" element={<BulletinInputPage />} />
+               <Route path="/bdc-report" element={<BDCReportFormPage />} />
+               <Route path="/bulletins/upload-pdf-template" element={<UploadPDFTemplatePage />} />
+               <Route
+  path="/my-business-heads"
+  element={<MyBusinessHeadsPage />}
+/>
+        <Route path="/bulletins" element={<BulletinPage />} />
+            <Route
+  path="/associate-manager/team-payment-history"
+  element={<AssociateManagerTeamPaymentHistoryPage />}
+/>
+<Route
+  path="/associate-manager/team-breakup/:historyId"
+  element={<AssociateManagerTeamBreakupPage />}
+/>
 
+             <Route
+          path="/associate/payment-history"
+          element={<AssociatePaymentHistoryPage />}
+        />
+
+        {/* Associate payment‐history detail (shows the actual reports paid in that event) */}
+        <Route
+          path="/associate/payment-history/:historyId"
+          element={<AssociatePaymentHistoryDetailPage />}
+        />
+
+                    <Route path="admin/payment-history" element={<AdminPaymentHistoryPage />} />
+                    <Route
+  path="/admin/associate-payment-history"
+  element={<AdminAssociatePaymentHistoryPage />}
+/>
+
+
+            <Route path="manager-payment-breakup/:runId" element={<ManagerPaymentBreakupPage />}/>
+            <Route path="/businesshead" element={<BusinessHeadView />} />
+            <Route path="/manager-unpaid-commissions" element={<ManagerUnpaidCommissionPage />}/>
           <Route path="/admin/employees" element={ <AdminRoute> <EmployeeManagement /></AdminRoute> } />
           <Route path="/employee-management" element={<EmployeeManagement />} />
           <Route path="/admin" element={ <AdminRoute> <AdminDashboardPage /> </AdminRoute> } />
