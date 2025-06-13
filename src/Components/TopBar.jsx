@@ -48,106 +48,6 @@ export default function TopBar() {
 
           {/* Desktop Menu */}
           <div className="hidden md:flex md:items-center md:space-x-4">
-            {/* Employee / Associate / Manager-only links */}
-            {['employee', 'associate', 'manager'].includes(profile.role) && (
-              <>
-                <NavLink
-                  to="/submit"
-                  className={({ isActive }) =>
-                    `px-3 py-1 rounded ${
-                      isActive ? 'bg-indigo-600 text-white' : 'text-gray-700 hover:bg-indigo-100'
-                    }`
-                  }
-                >
-                  Submit Sales Report
-                </NavLink>
-
-                <NavLink
-                  to="/reports"
-                  className={({ isActive }) =>
-                    `px-3 py-1 rounded ${
-                      isActive ? 'bg-indigo-600 text-white' : 'text-gray-700 hover:bg-indigo-100'
-                    }`
-                  }
-                >
-                  My Sales Reports Status
-                </NavLink>
-              </>
-            )}
-
-            {/* Everyone sees Profile, Downloads, Bulletin */}
-            <NavLink
-              to="/profile"
-              className={({ isActive }) =>
-                `px-3 py-1 rounded ${
-                  isActive ? 'bg-indigo-600 text-white' : 'text-gray-700 hover:bg-indigo-100'
-                }`
-              }
-            >
-              Profile
-            </NavLink>
-
-            <NavLink
-              to="/downloads"
-              className={({ isActive }) =>
-                `px-3 py-1 rounded ${
-                  isActive ? 'bg-indigo-600 text-white' : 'text-gray-700 hover:bg-indigo-100'
-                }`
-              }
-            >
-              Downloads
-            </NavLink>
-
-            <NavLink
-              to="/bulletins"
-              className={({ isActive }) =>
-                `px-3 py-1 rounded ${
-                  isActive ? 'bg-indigo-600 text-white' : 'text-gray-700 hover:bg-indigo-100'
-                }`
-              }
-            >
-              Bulletin
-            </NavLink>
-
-            {/* Manager-only */}
-            {profile.role === 'manager' && (
-              <>
-                <NavLink
-                  to="/manager"
-                  className={({ isActive }) =>
-                    `px-3 py-1 rounded ${
-                      isActive ? 'bg-indigo-600 text-white' : 'text-gray-700 hover:bg-indigo-100'
-                    }`
-                  }
-                >
-                  My Team Sales Report
-                </NavLink>
-
-                <NavLink
-                  to="/manager-unpaid-commissions"
-                  className={({ isActive }) =>
-                    `px-3 py-1 rounded ${
-                      isActive ? 'bg-indigo-600 text-white' : 'text-gray-700 hover:bg-indigo-100'
-                    }`
-                  }
-                  onClick={closeMenu}
-                >
-                  My Payment History
-                </NavLink>
-
-                <NavLink
-                  to="/manager-payment-history"
-                  className={({ isActive }) =>
-                    `px-3 py-1 rounded ${
-                      isActive ? 'bg-indigo-600 text-white' : 'text-gray-700 hover:bg-indigo-100'
-                    }`
-                  }
-                  onClick={closeMenu}
-                >
-                  My Team's Payment History
-                </NavLink>
-              </>
-            )}
 
             {/* Admin-only */}
             {profile.role === 'admin' && (
@@ -156,7 +56,7 @@ export default function TopBar() {
                   to="/admin"
                   className={({ isActive }) =>
                     `px-3 py-1 rounded ${
-                      isActive ? 'bg-indigo-600 text-white' : 'text-gray-700 hover:bg-indigo-100'
+                      isActive ? 'bg-[#8a1ccf] text-white' : 'text-gray-700 hover:bg-indigo-100'
                     }`
                   }
                 >
@@ -167,13 +67,41 @@ export default function TopBar() {
                   to="/bulletins/upload-pdf-template"
                   className={({ isActive }) =>
                     `px-3 py-1 rounded ${
-                      isActive ? 'bg-indigo-600 text-white' : 'text-gray-700 hover:bg-indigo-100'
+                      isActive ? 'bg-[#8a1ccf] text-white' : 'text-gray-700 hover:bg-indigo-100'
                     }`
                   }
                 >
                   Upload PDF Template
                 </NavLink>
               </>
+            )}
+
+            {/* Sales Head-only */}
+            {profile.role === 'salesHead' && (
+              <NavLink
+                to="/my-business-heads"
+                className={({ isActive }) =>
+                  `px-3 py-1 rounded ${
+                    isActive ? 'bg-[#8a1ccf] text-white' : 'text-gray-700 hover:bg-indigo-100'
+                  }`
+                }
+              >
+                Sales Head's Dashboard
+              </NavLink>
+            )}
+
+             {/* Business Head-only */}
+            {profile.role === 'businessHead' && (
+              <NavLink
+                to="/businesshead"
+                className={({ isActive }) =>
+                  `px-3 py-1 rounded ${
+                    isActive ? 'bg-[#8a1ccf] text-white' : 'text-gray-700 hover:bg-indigo-100'
+                  }`
+                }
+              >
+                Senior Manager's Dashboard
+              </NavLink>
             )}
 
             {/* Telecaller-only */}
@@ -183,7 +111,7 @@ export default function TopBar() {
                   to="/telecaller"
                   className={({ isActive }) =>
                     `px-3 py-1 rounded ${
-                      isActive ? 'bg-indigo-600 text-white' : 'text-gray-700 hover:bg-indigo-100'
+                      isActive ? 'bg-[#8a1ccf] text-white' : 'text-gray-700 hover:bg-{8a1ccf}-100'
                     }`
                   }
                   onClick={closeMenu}
@@ -195,7 +123,7 @@ export default function TopBar() {
                   to="/forecast"
                   className={({ isActive }) =>
                     `px-3 py-1 rounded ${
-                      isActive ? 'bg-indigo-600 text-white' : 'text-gray-700 hover:bg-indigo-100'
+                      isActive ? 'bg-[#8a1ccf] text-white' : 'text-gray-700 hover:bg-indigo-100'
                     }`
                   }
                 >
@@ -206,7 +134,7 @@ export default function TopBar() {
                   to="/forecast-input"
                   className={({ isActive }) =>
                     `px-3 py-1 rounded ${
-                      isActive ? 'bg-indigo-600 text-white' : 'text-gray-700 hover:bg-indigo-100'
+                      isActive ? 'bg-[#8a1ccf] text-white' : 'text-gray-700 hover:bg-indigo-100'
                     }`
                   }
                 >
@@ -215,48 +143,79 @@ export default function TopBar() {
               </>
             )}
 
-            {/* Business Head-only */}
-            {profile.role === 'businessHead' && (
-              <NavLink
-                to="/businesshead"
-                className={({ isActive }) =>
-                  `px-3 py-1 rounded ${
-                    isActive ? 'bg-indigo-600 text-white' : 'text-gray-700 hover:bg-indigo-100'
-                  }`
-                }
-              >
-                Senior Manager's Dashboard
-              </NavLink>
+            
+           
+
+           
+
+            {/* Manager-only */}
+            {profile.role === 'manager' && (
+              <>
+                <NavLink
+                  to="/manager"
+                  className={({ isActive }) =>
+                    `px-3 py-1 rounded ${
+                      isActive ? 'bg-[#8a1ccf] text-white' : 'text-gray-700 hover:bg-indigo-100'
+                    }`
+                  }
+                >
+                  My Team Sales Report
+                </NavLink>
+
+                <NavLink
+                  to="/manager-unpaid-commissions"
+                  className={({ isActive }) =>
+                    `px-3 py-1 rounded ${
+                      isActive ? 'bg-[#8a1ccf] text-white' : 'text-gray-700 hover:bg-indigo-100'
+                    }`
+                  }
+                  onClick={closeMenu}
+                >
+                  My Payment History
+                </NavLink>
+
+                <NavLink
+                  to="/manager-payment-history"
+                  className={({ isActive }) =>
+                    `px-3 py-1 rounded ${
+                      isActive ? 'bg-[#8a1ccf] text-white' : 'text-gray-700 hover:bg-indigo-100'
+                    }`
+                  }
+                  onClick={closeMenu}
+                >
+                  My Team's Payment History
+                </NavLink>
+              </>
             )}
 
-            {/* Employee/Associate/BDC-only Payment History */}
-            {['employee', 'associate', 'businessDevelopmentConsultant'].includes(profile.role) && (
-              <NavLink
-                to="/payment-history"
-                className={({ isActive }) =>
-                  `px-3 py-1 rounded ${
-                    isActive ? 'bg-indigo-600 text-white' : 'text-gray-700 hover:bg-indigo-100'
-                  }`
-                }
-                onClick={closeMenu}
-              >
-                Payment History
-              </NavLink>
+            {/* Employee / Associate / Manager-only links */}
+            {['employee', 'associate', 'manager'].includes(profile.role) && (
+              <>
+                <NavLink
+                  to="/submit"
+                  className={({ isActive }) =>
+                    `px-3 py-1 rounded ${
+                      isActive ? 'bg-[#8a1ccf] text-white' : 'text-gray-700 hover:bg-indigo-100'
+                    }`
+                  }
+                >
+                  Submit Sales Report
+                </NavLink>
+
+                <NavLink
+                  to="/reports"
+                  className={({ isActive }) =>
+                    `px-3 py-1 rounded ${
+                      isActive ? 'bg-[#8a1ccf]-600 text-white' : 'text-gray-700 hover:bg-indigo-100'
+                    }`
+                  }
+                >
+                  My Sales Reports Status
+                </NavLink>
+              </>
             )}
 
-            {/* Sales Head-only */}
-            {profile.role === 'salesHead' && (
-              <NavLink
-                to="/my-business-heads"
-                className={({ isActive }) =>
-                  `px-3 py-1 rounded ${
-                    isActive ? 'bg-indigo-600 text-white' : 'text-gray-700 hover:bg-indigo-100'
-                  }`
-                }
-              >
-                Sales Head's Dashboard
-              </NavLink>
-            )}
+         
 
             {/* BDC-only */}
             {profile.role === 'businessDevelopmentConsultant' && (
@@ -265,7 +224,7 @@ export default function TopBar() {
                 to="/bdc-report"
                 className={({ isActive }) =>
                   `px-3 py-1 rounded ${
-                    isActive ? 'bg-indigo-600 text-white' : 'text-gray-700 hover:bg-indigo-100'
+                    isActive ? 'bg-[#8a1ccf] text-white' : 'text-gray-700 hover:bg-indigo-100'
                   }`
                 }
               >
@@ -276,7 +235,7 @@ export default function TopBar() {
                   to="/reports"
                   className={({ isActive }) =>
                     `px-3 py-1 rounded ${
-                      isActive ? 'bg-indigo-600 text-white' : 'text-gray-700 hover:bg-indigo-100'
+                      isActive ? 'bg-[#8a1ccf] text-white' : 'text-gray-700 hover:bg-indigo-100'
                     }`
                   }
                 >
@@ -284,6 +243,58 @@ export default function TopBar() {
                 </NavLink>
                 </>
             )}
+
+
+            {/* Employee/Associate/BDC-only Payment History */}
+            {['employee', 'associate', 'businessDevelopmentConsultant'].includes(profile.role) && (
+              <NavLink
+                to="/payment-history"
+                className={({ isActive }) =>
+                  `px-3 py-1 rounded ${
+                    isActive ? 'bg-[#8a1ccf] text-white' : 'text-gray-700 hover:bg-indigo-100'
+                  }`
+                }
+                onClick={closeMenu}
+              >
+                Payment History
+              </NavLink>
+            )}
+
+            
+
+            
+             {/* Everyone sees Profile, Downloads, Bulletin */}
+             <NavLink
+              to="/downloads"
+              className={({ isActive }) =>
+                `px-3 py-1 rounded ${
+                  isActive ? 'bg-[#8a1ccf] text-white' : 'text-gray-700 hover:bg-indigo-100'
+                }`
+              }
+            >
+              Downloads
+            </NavLink>
+
+            <NavLink
+              to="/bulletins"
+              className={({ isActive }) =>
+                `px-3 py-1 rounded ${
+                  isActive ? 'bg-[#8a1ccf]-600 text-white' : 'text-gray-700 hover:bg-indigo-100'
+                }`
+              }
+            >
+              Bulletin
+            </NavLink>
+            <NavLink
+              to="/profile"
+              className={({ isActive }) =>
+                `px-3 py-1 rounded ${
+                  isActive ? 'bg-[#8a1ccf] text-white' : 'text-gray-700 hover:bg-indigo-100'
+                }`
+              }
+            >
+              Profile
+            </NavLink>
 
             {/* Logout Button */}
             <button
@@ -333,77 +344,8 @@ export default function TopBar() {
       {menuOpen && (
         <div className="md:hidden">
           <div className="px-2 pt-2 pb-3 space-y-1 sm:px-3">
-            {/* Employee / Associate / Manager-only */}
-            {['employee', 'associate', 'manager'].includes(profile.role) && (
-              <>
-                <NavLink
-                  to="/submit"
-                  onClick={closeMenu}
-                  className="block text-gray-700 hover:text-blue-600 px-3 py-2 rounded-md text-base font-medium"
-                >
-                  Submit Sales Report
-                </NavLink>
-                <NavLink
-                  to="/reports"
-                  onClick={closeMenu}
-                  className="block text-gray-700 hover:text-blue-600 px-3 py-2 rounded-md text-base font-medium"
-                >
-                  My Sales Reports Status
-                </NavLink>
-              </>
-            )}
 
-            {/* Everyone */}
-            <NavLink
-              to="/profile"
-              onClick={closeMenu}
-              className="block text-gray-700 hover:text-blue-600 px-3 py-2 rounded-md text-base font-medium"
-            >
-              Profile
-            </NavLink>
-            <NavLink
-              to="/downloads"
-              onClick={closeMenu}
-              className="block text-gray-700 hover:text-blue-600 px-3 py-2 rounded-md text-base font-medium"
-            >
-              Downloads
-            </NavLink>
-            <NavLink
-              to="/bulletins"
-              onClick={closeMenu}
-              className="block text-gray-700 hover:text-blue-600 px-3 py-2 rounded-md text-base font-medium"
-            >
-              Bulletin
-            </NavLink>
-
-            {/* Manager-only */}
-            {profile.role === 'manager' && (
-              <>
-                <NavLink
-                  to="/manager"
-                  onClick={closeMenu}
-                  className="block text-gray-700 hover:text-blue-600 px-3 py-2 rounded-md text-base font-medium"
-                >
-                  My Team Sales Report
-                </NavLink>
-                <NavLink
-                  to="/manager-unpaid-commissions"
-                  onClick={closeMenu}
-                  className="block text-gray-700 hover:text-blue-600 px-3 py-2 rounded-md text-base font-medium"
-                >
-                  My Payment History
-                </NavLink>
-                <NavLink
-                  to="/manager-payment-history"
-                  onClick={closeMenu}
-                  className="block text-gray-700 hover:text-blue-600 px-3 py-2 rounded-md text-base font-medium"
-                >
-                  Payment History
-                </NavLink>
-              </>
-            )}
-
-            {/* Admin-only */}
+             {/* Admin-only */}
             {profile.role === 'admin' && (
               <>
                 <NavLink
@@ -423,7 +365,29 @@ export default function TopBar() {
               </>
             )}
 
-            {/* Telecaller-only */}
+            {/* Sales Head-only */}
+            {profile.role === 'salesHead' && (
+              <NavLink
+                to="/my-business-heads"
+                onClick={closeMenu}
+                className="block text-gray-700 hover:text-blue-600 px-3 py-2 rounded-md text-base font-medium"
+              >
+                My Business Heads
+              </NavLink>
+            )}
+
+            {/* Business Head-only */}
+            {profile.role === 'businessHead' && (
+              <NavLink
+                to="/businesshead"
+                onClick={closeMenu}
+                className="block text-gray-700 hover:text-blue-600 px-3 py-2 rounded-md text-base font-medium"
+              >
+                Senior Manager's View
+              </NavLink>
+            )}
+
+             {/* Telecaller-only */}
             {profile.role === 'telecaller' && (
               <>
                 <NavLink
@@ -450,38 +414,59 @@ export default function TopBar() {
               </>
             )}
 
-            {/* Business Head-only */}
-            {profile.role === 'businessHead' && (
-              <NavLink
-                to="/businesshead"
-                onClick={closeMenu}
-                className="block text-gray-700 hover:text-blue-600 px-3 py-2 rounded-md text-base font-medium"
-              >
-                Senior Manager's View
-              </NavLink>
+             {/* Manager-only */}
+            {profile.role === 'manager' && (
+              <>
+                <NavLink
+                  to="/manager"
+                  onClick={closeMenu}
+                  className="block text-gray-700 hover:text-blue-600 px-3 py-2 rounded-md text-base font-medium"
+                >
+                  My Team Sales Report
+                </NavLink>
+                <NavLink
+                  to="/manager-unpaid-commissions"
+                  onClick={closeMenu}
+                  className="block text-gray-700 hover:text-blue-600 px-3 py-2 rounded-md text-base font-medium"
+                >
+                  My Payment History
+                </NavLink>
+                <NavLink
+                  to="/manager-payment-history"
+                  onClick={closeMenu}
+                  className="block text-gray-700 hover:text-blue-600 px-3 py-2 rounded-md text-base font-medium"
+                >
+                  Payment History
+                </NavLink>
+              </>
             )}
 
-            {/* Employee/Associate/BDC-only Payment History */}
-            {['employee', 'associate', 'businessDevelopmentConsultant'].includes(profile.role) && (
-              <NavLink
-                to="/payment-history"
-                onClick={closeMenu}
-                className="block text-gray-700 hover:text-blue-600 px-3 py-2 rounded-md text-base font-medium"
-              >
-                Payment History
-              </NavLink>
+
+            {/* Employee / Associate / Manager-only */}
+            {['employee', 'associate', 'manager'].includes(profile.role) && (
+              <>
+                <NavLink
+                  to="/submit"
+                  onClick={closeMenu}
+                  className="block text-gray-700 hover:text-blue-600 px-3 py-2 rounded-md text-base font-medium"
+                >
+                  Submit Sales Report
+                </NavLink>
+                <NavLink
+                  to="/reports"
+                  onClick={closeMenu}
+                  className="block text-gray-700 hover:text-blue-600 px-3 py-2 rounded-md text-base font-medium"
+                >
+                  My Sales Reports Status
+                </NavLink>
+              </>
             )}
 
-            {/* Sales Head-only */}
-            {profile.role === 'salesHead' && (
-              <NavLink
-                to="/my-business-heads"
-                onClick={closeMenu}
-                className="block text-gray-700 hover:text-blue-600 px-3 py-2 rounded-md text-base font-medium"
-              >
-                My Business Heads
-              </NavLink>
-            )}
+            
+           
+
+           
+           
 
             {/* BDC-only */}
             {profile.role === 'businessDevelopmentConsultant' && (
@@ -493,6 +478,40 @@ export default function TopBar() {
                 Submit BDC Sales Report
               </NavLink>
             )}
+
+             {/* Employee/Associate/BDC-only Payment History */}
+            {['employee', 'associate', 'businessDevelopmentConsultant'].includes(profile.role) && (
+              <NavLink
+                to="/payment-history"
+                onClick={closeMenu}
+                className="block text-gray-700 hover:text-blue-600 px-3 py-2 rounded-md text-base font-medium"
+              >
+                Payment History
+              </NavLink>
+            )}
+
+            {/* Everyone */}
+             <NavLink
+              to="/downloads"
+              onClick={closeMenu}
+              className="block text-gray-700 hover:text-blue-600 px-3 py-2 rounded-md text-base font-medium"
+            >
+              Downloads
+            </NavLink>
+             <NavLink
+              to="/bulletins"
+              onClick={closeMenu}
+              className="block text-gray-700 hover:text-blue-600 px-3 py-2 rounded-md text-base font-medium"
+            >
+              Bulletin
+            </NavLink>
+            <NavLink
+              to="/profile"
+              onClick={closeMenu}
+              className="block text-gray-700 hover:text-blue-600 px-3 py-2 rounded-md text-base font-medium"
+            >
+              Profile
+            </NavLink>
 
             {/* Logout */}
             <button
