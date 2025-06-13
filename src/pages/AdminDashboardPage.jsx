@@ -102,13 +102,7 @@ export default function AdminDashboardPage() {
           >
             Payment History
           </button>
-           <button
-           type="button"
-           onClick={() => navigate('/admin/upload-designs')}
-           className="px-3 py-1 bg-indigo-500 text-white rounded hover:bg-indigo-900"
-         >
-           Downloads Input
-         </button>
+          
           <button
            type="button"
            onClick={() => navigate('/admin/bulletin-input')}

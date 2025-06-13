@@ -1,4 +1,5 @@
 // src/pages/BulletinInputPage.jsx
+
 import React, { useState, useEffect } from 'react';
 import { Navigate }             from 'react-router-dom';
 import { useUserProfile }       from '../hooks/useUserProfile';
@@ -11,29 +12,33 @@ import {
 } from 'firebase/storage';
 
 const ALL_ROLES = [
-  { label: 'Admissions Officer',     value: 'employee' },
-  { label: 'Telecaller',              value: 'telecaller' },
-  { label: 'Manager',                 value: 'manager' },
-  { label: 'Sales Associate',         value: 'associate' },
-  { label: 'Business Head',           value: 'businessHead' },
-  { label: 'Associate Manager',       value: 'associateManager' },
-  { label: 'Admin',                   value: 'admin' },
+  { label: 'Education Counseller',     value: 'employee' },
+    { label: 'Sales Associate',        value: 'associate' },
+  { label: 'Business Development Counseller',  value: 'businessDevelopmentCounseller' },
+  { label: 'Team Lead',                value: 'manager' },
+  { label: 'Telecaller/Sales manager',             value: 'telecaller' },
+  { label: 'Senior Manager',          value: 'businessHead' },
+  { label: 'Sales Head',      value: 'salesHead' },
+  { label: 'Admin',                  value: 'admin' },
   // …etc, add any other custom roles you use…
 ];
 
 export default function BulletinInputPage() {
   const { profile, loading } = useUserProfile();
+
+  // form state
   const [contentType, setContentType] = useState('text');
   const [textContent, setTextContent] = useState('');
   const [linkContent, setLinkContent] = useState('');
   const [photoFile, setPhotoFile]     = useState(null);
+  const [docFile, setDocFile]         = useState(null);
   const [uploading, setUploading]     = useState(false);
 
   const [selectedRoles, setSelectedRoles] = useState([]);
-  const [errorMsg, setErrorMsg]     = useState('');
-  const [successMsg, setSuccessMsg] = useState('');
+  const [errorMsg, setErrorMsg]           = useState('');
+  const [successMsg, setSuccessMsg]       = useState('');
 
-  // 1) Guard: only “admin” can publish
+  // only admin can access
   if (!loading && profile?.role !== 'admin') {
     return <Navigate to="/" replace />;
   }
@@ -45,54 +50,78 @@ export default function BulletinInputPage() {
     setTextContent('');
     setLinkContent('');
     setPhotoFile(null);
+    setDocFile(null);
     setSelectedRoles([]);
     setErrorMsg('');
     setSuccessMsg('');
   };
 
-  const handlePhotoChange = (e) => {
-    const chosen = e.target.files[0] || null;
-    setPhotoFile(chosen);
+  const handlePhotoChange = e => {
+    setPhotoFile(e.target.files[0] || null);
+  };
+  const handleDocChange = e => {
+    setDocFile(e.target.files[0] || null);
   };
 
-  const handlePublish = async (e) => {
+  const handlePublish = async e => {
     e.preventDefault();
-    setErrorMsg('');
-    setSuccessMsg('');
+    setErrorMsg(''); setSuccessMsg('');
 
-    if (selectedRoles.length === 0) {
+    if (!selectedRoles.length) {
       setErrorMsg('Please select at least one role.');
       return;
     }
 
-    let finalContentURL = '';
+    let finalContent = '';
+    let finalType    = contentType;
+
     if (contentType === 'text') {
       if (!textContent.trim()) {
-        setErrorMsg('Please enter some text to publish.');
+        setErrorMsg('Please enter some text.');
         return;
       }
-      finalContentURL = textContent.trim();
+      finalContent = textContent.trim();
+
     } else if (contentType === 'link') {
       if (!linkContent.trim()) {
         setErrorMsg('Please enter a valid URL.');
         return;
       }
-      finalContentURL = linkContent.trim();
+      finalContent = linkContent.trim();
+
     } else if (contentType === 'photo') {
       if (!photoFile) {
-        setErrorMsg('Please select a photo file to upload.');
+        setErrorMsg('Please select a photo.');
         return;
       }
       setUploading(true);
       try {
-        // upload to Storage under “bulletin_photos/…”
-        const filename = `bulletin_${Date.now()}_${photoFile.name}`;
-        const storageReference = storageRef(storage, `bulletin_photos/${filename}`);
-        await uploadBytes(storageReference, photoFile);
-        finalContentURL = await getDownloadURL(storageReference);
+        const filename = `bulletin_photo_${Date.now()}_${photoFile.name}`;
+        const refStorage = storageRef(storage, `bulletin_photos/${filename}`);
+        await uploadBytes(refStorage, photoFile);
+        finalContent = await getDownloadURL(refStorage);
       } catch (err) {
-        console.error('Photo upload failed:', err);
-        setErrorMsg('Failed to upload photo.');
+        console.error(err);
+        setErrorMsg('Photo upload failed.');
+        setUploading(false);
+        return;
+      }
+      setUploading(false);
+
+    } else if (contentType === 'document') {
+      if (!docFile) {
+        setErrorMsg('Please select a document file.');
+        return;
+      }
+      setUploading(true);
+      try {
+        const filename = `bulletin_doc_${Date.now()}_${docFile.name}`;
+        const refStorage = storageRef(storage, `bulletin_documents/${filename}`);
+        await uploadBytes(refStorage, docFile);
+        finalContent = await getDownloadURL(refStorage);
+      } catch (err) {
+        console.error(err);
+        setErrorMsg('Document upload failed.');
         setUploading(false);
         return;
       }
@@ -101,54 +130,46 @@ export default function BulletinInputPage() {
 
     try {
       await addDoc(collection(db, 'bulletins'), {
-        contentType,
-        content: finalContentURL,
-        roles: selectedRoles,
-        createdAt: serverTimestamp()
+        contentType: finalType,
+        content:     finalContent,
+        roles:       selectedRoles,
+        createdAt:   serverTimestamp()
       });
       setSuccessMsg('Bulletin published successfully.');
       resetForm();
     } catch (err) {
-      console.error('Firestore write failed:', err);
+      console.error(err);
       setErrorMsg('Failed to publish bulletin.');
     }
   };
 
   return (
     <div className="p-6 max-w-2xl mx-auto bg-white rounded shadow">
-      <br /><br />
       <h2 className="text-2xl font-bold mb-4">Publish New Bulletin</h2>
 
-      {errorMsg && (
-        <div className="mb-4 text-red-700 bg-red-100 px-3 py-2 rounded">
-          {errorMsg}
-        </div>
-      )}
-      {successMsg && (
-        <div className="mb-4 text-green-700 bg-green-100 px-3 py-2 rounded">
-          {successMsg}
-        </div>
-      )}
+      {errorMsg && <div className="mb-4 text-red-700 bg-red-100 px-3 py-2 rounded">{errorMsg}</div>}
+      {successMsg && <div className="mb-4 text-green-700 bg-green-100 px-3 py-2 rounded">{successMsg}</div>}
 
       <form onSubmit={handlePublish} className="space-y-6">
-        {/* 1) Content Type Selector */}
+        {/* Content Type */}
         <div>
           <label className="block text-sm font-medium">Content Type</label>
           <select
             value={contentType}
-            onChange={e => setContentType(e.target.value)}
+            onChange={e => { setContentType(e.target.value); setErrorMsg(''); }}
             className="mt-1 w-full border-gray-300 rounded-md shadow-sm"
           >
             <option value="text">Text</option>
             <option value="link">Link (URL)</option>
-            <option value="photo">Photo Upload</option>
+            <option value="photo">Photo</option>
+            <option value="document">Document (.doc/.docx)</option>
           </select>
         </div>
 
-        {/* 2a) If “text” → show textarea */}
+        {/* Text */}
         {contentType === 'text' && (
           <div>
-            <label className="block text-sm font-medium">Bulletin Text</label>
+            <label className="block text-sm font-medium">Text</label>
             <textarea
               rows={4}
               value={textContent}
@@ -158,21 +179,21 @@ export default function BulletinInputPage() {
           </div>
         )}
 
-        {/* 2b) If “link” → show URL field */}
+        {/* Link */}
         {contentType === 'link' && (
           <div>
-            <label className="block text-sm font-medium">Bulletin Link (URL)</label>
+            <label className="block text-sm font-medium">URL</label>
             <input
               type="url"
               value={linkContent}
               onChange={e => setLinkContent(e.target.value)}
-              placeholder="https://example.com/..."
+              placeholder="https://example.com"
               className="mt-1 w-full border-gray-300 rounded-md shadow-sm px-3 py-2"
             />
           </div>
         )}
 
-        {/* 2c) If “photo” → show file input + preview */}
+        {/* Photo */}
         {contentType === 'photo' && (
           <div>
             <label className="block text-sm font-medium">Upload Photo</label>
@@ -186,37 +207,54 @@ export default function BulletinInputPage() {
               <img
                 src={URL.createObjectURL(photoFile)}
                 alt="Preview"
-                className="mt-2 max-h-48 border"
+                className="mt-2 max-h-48 border rounded"
               />
             )}
           </div>
         )}
 
-        {/* 3) Select which roles can see this bulletin */}
+        {/* Document */}
+        {contentType === 'document' && (
+          <div>
+            <label className="block text-sm font-medium">Upload Document</label>
+            <input
+              type="file"
+              accept=".doc,.docx"
+              onChange={handleDocChange}
+              className="mt-1 block w-full"
+            />
+            {docFile && (
+              <p className="mt-2 text-sm text-gray-700">{docFile.name}</p>
+            )}
+          </div>
+        )}
+
+        {/* Roles */}
         <div>
-          <label className="block text-sm font-medium">Visible To (Select one or more)</label>
-          <div className="mt-1 border-gray-300 rounded-md shadow-sm p-2">
+          <label className="block text-sm font-medium">Visible To</label>
+          <div className="mt-1 p-2 border-gray-300 rounded-md shadow-sm grid grid-cols-2 gap-2">
             {ALL_ROLES.map(r => (
-              <label key={r.value} className="inline-flex items-center mr-4 mb-2">
+              <label key={r.value} className="inline-flex items-center space-x-2">
                 <input
                   type="checkbox"
                   value={r.value}
                   checked={selectedRoles.includes(r.value)}
-                  onChange={e => {
-                    const val = e.target.value;
+                  onChange={() => {
                     setSelectedRoles(prev =>
-                      prev.includes(val) ? prev.filter(x => x !== val) : [...prev, val]
+                      prev.includes(r.value)
+                        ? prev.filter(x => x !== r.value)
+                        : [...prev, r.value]
                     );
                   }}
                   className="form-checkbox h-4 w-4 text-indigo-600"
                 />
-                <span className="ml-2 text-gray-700">{r.label}</span>
+                <span>{r.label}</span>
               </label>
             ))}
           </div>
         </div>
 
-        {/* 4) Publish Button */}
+        {/* Publish */}
         <button
           type="submit"
           disabled={uploading}

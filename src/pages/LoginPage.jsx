@@ -309,7 +309,7 @@ Press “OK” to Agree & Register Now, or “Cancel” to abort.`;
         
          <ToastContainer />
         <h1 className="text-3xl font-bold text-center text-[#8a1ccf]">
-          {isNew ? 'Sign Up' : 'Sign In'}
+          {isNew ? 'Register' : 'Sign In'}
         </h1>
 
         {error && (
@@ -587,9 +587,9 @@ Press “OK” to Agree & Register Now, or “Cancel” to abort.`;
               resetForm();
               setIsNew(!isNew);
             }}
-            className="text-[#8a1ccf] font-medium hover:underline"
+            className="text-[#8a1ccf] text-xl font-bold hover:underline"
           >
-            {isNew ? 'Sign In' : 'Create one'}
+            {isNew ? 'Sign In' : 'Register'}
           </button>
         </p>
 </div>

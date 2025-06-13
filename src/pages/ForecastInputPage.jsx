@@ -1,8 +1,8 @@
 // src/pages/ForecastInputPage.jsx
 import React, { useEffect, useState } from 'react';
-import { toast, ToastContainer } from 'react-toastify';
-import { useUserProfile }       from '../hooks/useUserProfile';
-import { Navigate }             from 'react-router-dom';
+import { toast, ToastContainer }      from 'react-toastify';
+import { useUserProfile }             from '../hooks/useUserProfile';
+import { Navigate }                   from 'react-router-dom';
 import {
   collection,
   query,
@@ -14,152 +14,150 @@ import {
 } from 'firebase/firestore';
 import { db } from '../firebase';
 
+const FORECAST_TYPES = [
+  { label: 'Daily',   value: 'dailyForecast'   },
+  { label: 'Weekly',  value: 'weeklyForecast'  },
+  { label: 'Monthly', value: 'monthlyForecast' }
+];
+
 export default function ForecastInputPage() {
   const { profile, loading } = useUserProfile();
-  const [managers, setManagers]           = useState([]);
+  const [managers, setManagers]             = useState([]);
   const [selectedManager, setSelectedManager] = useState('');
-  const [daily,   setDaily]   = useState('');
-  const [weekly,  setWeekly]  = useState('');
-  const [monthly, setMonthly] = useState('');
+  const [forecastType, setForecastType]       = useState('');
+  const [forecastValue, setForecastValue]     = useState('');
 
-  // Fetch managers once telecaller is known
+  // load managers under this telecaller
   useEffect(() => {
     if (loading || !profile) return;
     if (profile.role !== 'telecaller') return;
-
     (async () => {
-      const mgrCompIds = profile.managing || [];
-      if (!mgrCompIds.length) { setManagers([]); return; }
-
-      const chunks = [];
-      for (let i = 0; i < mgrCompIds.length; i += 10) {
-        chunks.push(mgrCompIds.slice(i, i + 10));
-      }
-
-      const fetched = [];
-      for (const chunk of chunks) {
+      const mgrCids = profile.managing || [];
+      if (!mgrCids.length) return setManagers([]);
+      let all = [];
+      for (let i = 0; i < mgrCids.length; i += 10) {
+        const chunk = mgrCids.slice(i, i + 10);
         const snap = await getDocs(
           query(
             collection(db, 'users'),
-            where('companyId','in',chunk),
-            where('role','==','manager')
+            where('companyId', 'in', chunk),
+            where('role', '==', 'manager')
           )
         );
-        snap.docs.forEach(d => fetched.push({ id: d.id, ...d.data() }));
+        all.push(...snap.docs.map(d => ({ id: d.id, ...d.data() })));
       }
-      setManagers(fetched);
+      setManagers(all);
     })();
-  }, [profile, loading]);
+  }, [loading, profile]);
 
-  // Redirect non-telecallers
   if (loading) return null;
   if (profile?.role !== 'telecaller') {
     return <Navigate to="/" replace />;
   }
 
-  // Helpers to compute period markers
-  const getTodayTS = () => {
-    const now = new Date(); now.setHours(0,0,0,0);
-    return Timestamp.fromDate(now);
-  };
-  const getWeekStartTS = () => {
-    const now = new Date(); now.setHours(0,0,0,0);
-    const wd = now.getDay(), diff = (wd+6)%7;
-    const monday = new Date(now);
-    monday.setDate(monday.getDate() - diff);
-    monday.setHours(0,0,0,0);
-    return Timestamp.fromDate(monday);
-  };
-  const getMonthStr = () => {
+  // helpers
+  const todayTS = (() => {
+    const d = new Date(); d.setHours(0,0,0,0);
+    return Timestamp.fromDate(d);
+  })();
+  const weekStartTS = (() => {
+    const d = new Date(); d.setHours(0,0,0,0);
+    const wd = d.getDay(), diff = (wd + 6) % 7;
+    d.setDate(d.getDate() - diff);
+    return Timestamp.fromDate(d);
+  })();
+  const monthStr = (() => {
     const d = new Date();
     return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
-  };
+  })();
 
-  // Upsert helper for a single field
-  async function upsertForecast(filterQuery, fields) {
-    const snap = await getDocs(filterQuery);
-    if (snap.empty) {
-      await addDoc(collection(db,'forecasts'), {
-        telecallerCompanyId: profile.companyId,
-        managerId:           selectedManager,
-        date:                getTodayTS(),
-        weekStart:           getWeekStartTS(),
-        month:               getMonthStr(),
-        createdAt:           Timestamp.now(),
-        // initialize all three so the doc is uniform
-        dailyForecast:       Number(daily),
-        weeklyForecast:      Number(weekly),
-        monthlyForecast:     Number(monthly),
-        ...fields
-      });
-    } else {
-      const ref = snap.docs[0].ref;
-      await updateDoc(ref, fields);
-    }
+  // date comparators
+  function sameDay(a, b) {
+    return a.toDate().toDateString() === b.toDate().toDateString();
+  }
+  function sameWeek(a, b) {
+    return a.toDate().getTime() === b.toDate().getTime();
   }
 
-  const handleDaily = async () => {
-    if (!selectedManager) return toast.error('Pick a manager first');
-    const todayTS = getTodayTS();
-    const q = query(
-      collection(db,'forecasts'),
-      where('telecallerCompanyId','==',profile.companyId),
-      where('managerId','==',selectedManager),
-      where('date','==',todayTS)
-    );
-    const snap = await getDocs(q);
-    if (!snap.empty) {
-      return toast.error('Daily forecast already submitted today');
-    }
-    await upsertForecast(q, { date: todayTS, dailyForecast: Number(daily) });
-    toast.success('Daily forecast saved');
-  };
+  const handleSubmit = async e => {
+    e.preventDefault();
+    if (!selectedManager)   return toast.error('Pick a manager first');
+    if (!forecastType)      return toast.error('Pick forecast type');
+    if (!forecastValue)     return toast.error('Enter a value');
+    const val = Number(forecastValue);
+    if (isNaN(val))         return toast.error('Value must be numeric');
 
-  const handleWeekly = async () => {
-    if (!selectedManager) return toast.error('Pick a manager first');
-    const weekStartTS = getWeekStartTS();
-    const q = query(
+    // 1) fetch or create the single document for this manager
+    const baseQ = query(
       collection(db,'forecasts'),
       where('telecallerCompanyId','==',profile.companyId),
-      where('managerId','==',selectedManager),
-      where('weekStart','==',weekStartTS)
+      where('managerId','==',selectedManager)
     );
-    const snap = await getDocs(q);
-    if (!snap.empty) {
-      return toast.error('Weekly forecast already submitted this week');
+    const snap = await getDocs(baseQ);
+    let docRef, data;
+    if (snap.empty) {
+      // create skeleton
+      const newDoc = await addDoc(collection(db,'forecasts'), {
+        telecallerCompanyId: profile.companyId,
+        managerId:           selectedManager,
+        createdAt:           Timestamp.now(),
+        dailyForecast:       null,
+        weeklyForecast:      null,
+        monthlyForecast:     null,
+        date:      null,
+        weekStart: null,
+        month:     null
+      });
+      docRef = newDoc;
+      data   = { date: null, weekStart: null, month: null };
+    } else {
+      const docSnap = snap.docs[0];
+      docRef = docSnap.ref;
+      data   = docSnap.data();
     }
-    await upsertForecast(q, { weekStart: weekStartTS, weeklyForecast: Number(weekly) });
-    toast.success('Weekly forecast saved');
-  };
 
-  const handleMonthly = async () => {
-    if (!selectedManager) return toast.error('Pick a manager first');
-    const monthStr = getMonthStr();
-    const q = query(
-      collection(db,'forecasts'),
-      where('telecallerCompanyId','==',profile.companyId),
-      where('managerId','==',selectedManager),
-      where('month','==',monthStr)
-    );
-    const snap = await getDocs(q);
-    if (!snap.empty) {
-      return toast.error('Monthly forecast already submitted this month');
+    // 2) guard & update per type
+    if (forecastType === 'dailyForecast') {
+      if (data.date && sameDay(data.date, todayTS)) {
+        return toast.error('Daily already submitted today');
+      }
+      await updateDoc(docRef, {
+        dailyForecast: val,
+        date:          todayTS,
+        // keep existing weekly/monthly untouched
+      });
+      return toast.success('Daily forecast saved');
     }
-    await upsertForecast(q, { month: monthStr, monthlyForecast: Number(monthly) });
-    toast.success('Monthly forecast saved');
+
+    if (forecastType === 'weeklyForecast') {
+      if (data.weekStart && sameWeek(data.weekStart, weekStartTS)) {
+        return toast.error('Weekly already submitted this week');
+      }
+      await updateDoc(docRef, {
+        weeklyForecast: val,
+        weekStart:      weekStartTS
+      });
+      return toast.success('Weekly forecast saved');
+    }
+
+    if (forecastType === 'monthlyForecast') {
+      if (data.month && data.month === monthStr) {
+        return toast.error('Monthly already submitted this month');
+      }
+      await updateDoc(docRef, {
+        monthlyForecast: val,
+        month:           monthStr
+      });
+      return toast.success('Monthly forecast saved');
+    }
   };
 
   return (
-    <div className="p-6 max-w-xl mx-auto">
-        <br /><br />
-      <ToastContainer
-        position="top-center" autoClose={3000} hideProgressBar={false}
-        newestOnTop={false} closeOnClick rtl={false}
-        pauseOnFocusLoss draggable pauseOnHover
-      />
-
+    <div className="p-6 max-w-md mx-auto">
+      <ToastContainer />
       <h2 className="text-2xl font-bold mb-4">Enter Forecast</h2>
-      <div className="space-y-4">
+      <form onSubmit={handleSubmit} className="space-y-4">
+        {/* Manager */}
         <div>
           <label className="block mb-1 font-medium">Select Manager</label>
           <select
@@ -170,60 +168,47 @@ export default function ForecastInputPage() {
             <option value="">-- Select Manager --</option>
             {managers.map(m => (
               <option key={m.id} value={m.id}>
-                {m.name} ({m.mobileNumber})
+                {m.name} ({m.companyId})
               </option>
             ))}
           </select>
         </div>
 
+        {/* Forecast Type */}
         <div>
-          <label className="block mb-1 font-medium">Daily Forecast</label>
-          <input
-            type="number"
-            value={daily}
-            onChange={e => setDaily(e.target.value)}
-            className="w-full border rounded p-2"
-          />
-          <button
-            onClick={handleDaily}
-            className="mt-2 px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700"
+          <label className="block mb-1 font-medium">Forecast Type</label>
+          <select
+            value={forecastType}
+            onChange={e => setForecastType(e.target.value)}
+            className="w-full border p-2 rounded"
           >
-            Submit Daily
-          </button>
+            <option value="">-- Select Type --</option>
+            {FORECAST_TYPES.map(f => (
+              <option key={f.value} value={f.value}>
+                {f.label}
+              </option>
+            ))}
+          </select>
         </div>
 
+        {/* Value */}
         <div>
-          <label className="block mb-1 font-medium">Weekly Forecast</label>
+          <label className="block mb-1 font-medium">Value</label>
           <input
             type="number"
-            value={weekly}
-            onChange={e => setWeekly(e.target.value)}
-            className="w-full border rounded p-2"
+            value={forecastValue}
+            onChange={e => setForecastValue(e.target.value)}
+            className="w-full border p-2 rounded"
           />
-          <button
-            onClick={handleWeekly}
-            className="mt-2 px-4 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700"
-          >
-            Submit Weekly
-          </button>
         </div>
 
-        <div>
-          <label className="block mb-1 font-medium">Monthly Forecast</label>
-          <input
-            type="number"
-            value={monthly}
-            onChange={e => setMonthly(e.target.value)}
-            className="w-full border rounded p-2"
-          />
-          <button
-            onClick={handleMonthly}
-            className="mt-2 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
-          >
-            Submit Monthly
-          </button>
-        </div>
-      </div>
+        <button
+          type="submit"
+          className="w-full py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700"
+        >
+          Submit
+        </button>
+      </form>
     </div>
   );
 }

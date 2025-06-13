@@ -1,3 +1,5 @@
+// src/pages/BulletinPage.jsx
+
 import React, { useEffect, useState } from 'react';
 import { Navigate }            from 'react-router-dom';
 import { useUserProfile }      from '../hooks/useUserProfile';
@@ -6,41 +8,41 @@ import {
   query,
   where,
   orderBy,
-  getDocs,
-  Timestamp
+  getDocs
 } from 'firebase/firestore';
-import { db }                  from '../firebase';
 import { jsPDF }               from 'jspdf';
 import Modal                   from 'react-modal';
+import { db }                  from '../firebase';
 
 Modal.setAppElement('#root');
 
 export default function BulletinPage() {
   const { profile, loading } = useUserProfile();
-  const [bulletins, setBulletins]     = useState([]);
-  const [loadingData, setLoadingData] = useState(true);
+  const [bulletins, setBulletins]       = useState([]);
+  const [loadingData, setLoadingData]   = useState(true);
   const [modalContent, setModalContent] = useState(null);
 
   useEffect(() => {
     if (loading || !profile) return;
     (async () => {
       setLoadingData(true);
-      const q = query(
-        collection(db, 'bulletins'),
-        where('roles', 'array-contains', profile.role),
-        orderBy('createdAt', 'desc')
+      const snap = await getDocs(
+        query(
+          collection(db, 'bulletins'),
+          where('roles', 'array-contains', profile.role),
+          orderBy('createdAt', 'desc')
+        )
       );
-      const snap = await getDocs(q);
       setBulletins(snap.docs.map(d => ({ id: d.id, ...d.data() })));
       setLoadingData(false);
     })();
   }, [loading, profile]);
 
-  if (loading)       return <p className="p-6">Loading…</p>;
+  if (loading)      return <p className="p-6">Loading…</p>;
   if (!profile)     return <Navigate to="/login" replace />;
   if (loadingData)  return <p className="p-6">Loading bulletins…</p>;
 
-  const openModal = content => setModalContent(content);
+  const openModal  = b => setModalContent(b);
   const closeModal = () => setModalContent(null);
 
   const downloadText = (text, id) => {
@@ -52,7 +54,6 @@ export default function BulletinPage() {
 
   return (
     <div className="p-6 max-w-3xl mx-auto space-y-6">
-      <br /><br />
       <h2 className="text-3xl font-bold text-indigo-600">Latest Bulletins</h2>
 
       {bulletins.length === 0 ? (
@@ -68,6 +69,8 @@ export default function BulletinPage() {
                 <p className="text-xs text-gray-400 mb-1">
                   Posted: {b.createdAt?.toDate().toLocaleString() || '–'}
                 </p>
+
+                {/* Previews */}
                 {b.contentType === 'text' && (
                   <p
                     className="text-gray-800 mb-2"
@@ -77,10 +80,9 @@ export default function BulletinPage() {
                       WebkitBoxOrient: 'vertical',
                       overflow: 'hidden'
                     }}
-                  >
-                    {b.content}
-                  </p>
+                  >{b.content}</p>
                 )}
+
                 {b.contentType === 'link' && (
                   <a
                     href={b.content}
@@ -91,38 +93,59 @@ export default function BulletinPage() {
                     {b.content}
                   </a>
                 )}
+
+                {b.contentType === 'photo' && (
+                  <p className="text-gray-800 mb-2 italic">Image Bulletin</p>
+                )}
+
+               
+
+                {/* Actions */}
                 <div className="space-x-2">
+                  {/* View & Download for text and photo */}
                   {(b.contentType === 'text' || b.contentType === 'photo') && (
                     <>
                       <button
                         onClick={() => openModal(b)}
                         className="px-3 py-1 bg-indigo-500 text-white rounded hover:bg-indigo-600 text-sm"
-                      >
-                        View
-                      </button>
+                      >View</button>
                       {b.contentType === 'text' && (
                         <button
                           onClick={() => downloadText(b.content, b.id)}
                           className="px-3 py-1 bg-green-500 text-white rounded hover:bg-green-600 text-sm"
-                        >
-                          Download
-                        </button>
+                        >Download</button>
                       )}
                       {b.contentType === 'photo' && (
                         <a
                           href={b.content}
                           download
                           className="px-3 py-1 bg-green-500 text-white rounded hover:bg-green-600 text-sm"
-                        >
-                          Download
-                        </a>
+                        >Download</a>
                       )}
+                    </>
+                  )}
+
+                  {/* For document: View and Download */}
+                  {b.contentType === 'document' && (
+                    <>
+                      <a
+                        href={b.content}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="px-3 py-1 bg-indigo-500 text-white rounded hover:bg-indigo-600 text-sm"
+                      >View</a>
+                      <a
+                        href={b.content}
+                        download
+                        className="px-3 py-1 bg-green-500 text-white rounded hover:bg-green-600 text-sm"
+                      >Download</a>
                     </>
                   )}
                 </div>
               </div>
 
-               {b.contentType === 'photo' && (
+              {/* Thumbnail for photo */}
+              {b.contentType === 'photo' && (
                 <div className="w-16 h-16 md:w-24 md:h-24 overflow-hidden rounded ml-0 md:ml-4 mt-4 md:mt-0 flex-shrink-0">
                   <img
                     src={b.content}
@@ -136,17 +159,18 @@ export default function BulletinPage() {
         </div>
       )}
 
+      {/* Modal for text/photo view */}
       <Modal
         isOpen={!!modalContent}
         onRequestClose={closeModal}
         className="fixed inset-0 flex items-center justify-center p-4 bg-black bg-opacity-50"
-        overlayClassName=""
       >
         <div className="bg-white rounded-lg overflow-auto max-h-full p-6 max-w-lg">
           <button
             onClick={closeModal}
             className="text-gray-500 hover:text-gray-700 float-right"
           >✕</button>
+
           {modalContent?.contentType === 'photo' && (
             <img src={modalContent.content} alt="full" className="w-full h-auto rounded" />
           )}
