@@ -66,6 +66,10 @@ export default function BulletinPage() {
               className="flex flex-col md:flex-row items-start md:items-center bg-white rounded-xl shadow-lg overflow-hidden hover:shadow-2xl transition p-4"
             >
               <div className="flex-1">
+                {/* 1️⃣ Title */}
+                <h3 className="text-xl font-semibold text-gray-800 mb-1">
+                  {b.title}
+                </h3>
                 <p className="text-xs text-gray-400 mb-1">
                   Posted: {b.createdAt?.toDate().toLocaleString() || '–'}
                 </p>

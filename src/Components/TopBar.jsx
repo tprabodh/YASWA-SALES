@@ -279,7 +279,7 @@ export default function TopBar() {
               to="/bulletins"
               className={({ isActive }) =>
                 `px-3 py-1 rounded ${
-                  isActive ? 'bg-[#8a1ccf]-600 text-white' : 'text-gray-700 hover:bg-indigo-100'
+                  isActive ? 'bg-[#8a1ccf] text-white' : 'text-gray-700 hover:bg-indigo-100'
                 }`
               }
             >
@@ -353,14 +353,14 @@ export default function TopBar() {
                   onClick={closeMenu}
                   className="block text-gray-700 hover:text-blue-600 px-3 py-2 rounded-md text-base font-medium"
                 >
-                  Admin Panel
+                  ADMIN PANEL
                 </NavLink>
                 <NavLink
                   to="/bulletins/upload-pdf-template"
                   onClick={closeMenu}
                   className="block text-gray-700 hover:text-blue-600 px-3 py-2 rounded-md text-base font-medium"
                 >
-                  Upload PDF Template
+                  UPLOAD PDF TEMPLATE
                 </NavLink>
               </>
             )}
@@ -372,7 +372,7 @@ export default function TopBar() {
                 onClick={closeMenu}
                 className="block text-gray-700 hover:text-blue-600 px-3 py-2 rounded-md text-base font-medium"
               >
-                My Business Heads
+                MY BUSINESS HEADS
               </NavLink>
             )}
 
@@ -383,7 +383,7 @@ export default function TopBar() {
                 onClick={closeMenu}
                 className="block text-gray-700 hover:text-blue-600 px-3 py-2 rounded-md text-base font-medium"
               >
-                Senior Manager's View
+                SENIOR MANAGER'S VIEW
               </NavLink>
             )}
 
@@ -395,7 +395,7 @@ export default function TopBar() {
                   onClick={closeMenu}
                   className="block text-gray-700 hover:text-blue-600 px-3 py-2 rounded-md text-base font-medium"
                 >
-                  Telecaller View
+                  TELECALLER'S VIEW
                 </NavLink>
                 <NavLink
                   to="/forecast"
@@ -409,7 +409,7 @@ export default function TopBar() {
                   onClick={closeMenu}
                   className="block text-gray-700 hover:text-blue-600 px-3 py-2 rounded-md text-base font-medium"
                 >
-                  Forecast Input
+                  FORECAST INPUT
                 </NavLink>
               </>
             )}
@@ -422,21 +422,21 @@ export default function TopBar() {
                   onClick={closeMenu}
                   className="block text-gray-700 hover:text-blue-600 px-3 py-2 rounded-md text-base font-medium"
                 >
-                  My Team Sales Report
+                  MY TEAM SALES REPORTS
                 </NavLink>
                 <NavLink
                   to="/manager-unpaid-commissions"
                   onClick={closeMenu}
                   className="block text-gray-700 hover:text-blue-600 px-3 py-2 rounded-md text-base font-medium"
                 >
-                  My Payment History
+                  MY PAYMENT HISTORY
                 </NavLink>
                 <NavLink
                   to="/manager-payment-history"
                   onClick={closeMenu}
                   className="block text-gray-700 hover:text-blue-600 px-3 py-2 rounded-md text-base font-medium"
                 >
-                  Payment History
+                  PAYMENT HISTORY
                 </NavLink>
               </>
             )}
@@ -450,14 +450,14 @@ export default function TopBar() {
                   onClick={closeMenu}
                   className="block text-gray-700 hover:text-blue-600 px-3 py-2 rounded-md text-base font-medium"
                 >
-                  Submit Sales Report
+                  SUBMIT SALES REPORT
                 </NavLink>
                 <NavLink
                   to="/reports"
                   onClick={closeMenu}
                   className="block text-gray-700 hover:text-blue-600 px-3 py-2 rounded-md text-base font-medium"
                 >
-                  My Sales Reports Status
+                  MY SALES REPORTS STATUS
                 </NavLink>
               </>
             )}
@@ -475,7 +475,7 @@ export default function TopBar() {
                 onClick={closeMenu}
                 className="block text-gray-700 hover:text-blue-600 px-3 py-2 rounded-md text-base font-medium"
               >
-                Submit BDC Sales Report
+                SUBMIT BDC SALES REPORT
               </NavLink>
             )}
 
@@ -486,7 +486,7 @@ export default function TopBar() {
                 onClick={closeMenu}
                 className="block text-gray-700 hover:text-blue-600 px-3 py-2 rounded-md text-base font-medium"
               >
-                Payment History
+                PAYMENT HISTORY
               </NavLink>
             )}
 
@@ -496,21 +496,21 @@ export default function TopBar() {
               onClick={closeMenu}
               className="block text-gray-700 hover:text-blue-600 px-3 py-2 rounded-md text-base font-medium"
             >
-              Downloads
+              DOWNLOADS
             </NavLink>
              <NavLink
               to="/bulletins"
               onClick={closeMenu}
               className="block text-gray-700 hover:text-blue-600 px-3 py-2 rounded-md text-base font-medium"
             >
-              Bulletin
+              BULLETIN
             </NavLink>
             <NavLink
               to="/profile"
               onClick={closeMenu}
               className="block text-gray-700 hover:text-blue-600 px-3 py-2 rounded-md text-base font-medium"
             >
-              Profile
+              PROFILE
             </NavLink>
 
             {/* Logout */}
@@ -521,7 +521,7 @@ export default function TopBar() {
               }}
               className="w-full text-left bg-red-500 text-white px-3 py-2 rounded-md text-base font-medium hover:bg-red-600"
             >
-              Logout
+              LOGOUT
             </button>
           </div>
         </div>

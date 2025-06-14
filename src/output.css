@@ -865,6 +865,9 @@
   .pb-3 {
     padding-bottom: calc(var(--spacing) * 3);
   }
+  .pl-5 {
+    padding-left: calc(var(--spacing) * 5);
+  }
   .text-center {
     text-align: center;
   }
@@ -932,6 +935,9 @@
   }
   .whitespace-nowrap {
     white-space: nowrap;
+  }
+  .whitespace-pre-line {
+    white-space: pre-line;
   }
   .text-\[\#8a1ccf\] {
     color: #8a1ccf;

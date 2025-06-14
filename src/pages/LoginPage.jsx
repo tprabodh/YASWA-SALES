@@ -1,6 +1,7 @@
 // src/pages/LoginPage.jsx
 
 import React, { useState } from 'react';
+import { useUserProfile } from '../hooks/useUserProfile';
 import { useNavigate }                 from 'react-router-dom';
 import { auth, db }                    from '../firebase';
 import {
@@ -24,6 +25,8 @@ import {
 // React‐Toastify imports:
 import { toast, ToastContainer }       from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
+import Modal from 'react-modal';
+
 
 // Helper: zero‐pad a number to 4 digits (e.g. 1 → "0001", 42 → "0042")
 function zeroPad4(n) {
@@ -107,6 +110,73 @@ async function assignUnderDummyManager(newUserCompanyId) {
   return chosenManagerData.companyId;
 }
 
+// pulled‐out registration logic
+// pulled‑out registration logic
+// now expects newRole & prefix in its params
+async function doActualRegistration({
+  name,
+  email,
+  password,
+  mobileNumber,
+  whatsappNumber,
+  aadharNumber,
+  bankAccountNumber,
+  ifscCode,
+  residingState,
+  position,
+  designation,
+  associatedWith,
+  teachingSubject,
+  newRole,    // ← the role string from positionOptions
+  prefix      // ← the company‑ID prefix from positionOptions
+}) {
+  // 1) create the Firebase Auth user
+  const userCred = await createUserWithEmailAndPassword(auth, email, password);
+
+  // 2) generate a sequential YSA‑<PREFIX>-000X
+  const newCompanyId = await generateNextCompanyId(prefix);
+
+  // 3) if this is an employee/associate/BDC, auto‑assign under a dummy manager
+  let supervisorId = null;
+  if (['employee','associate','businessDevelopmentConsultant'].includes(newRole)) {
+    supervisorId = await assignUnderDummyManager(newCompanyId);
+  }
+
+  // 4) build your Firestore payload
+  const userDoc = {
+    name,
+    email,
+    role:            newRole,
+    companyId:       newCompanyId,
+    mobileNumber,
+    whatsappNumber,
+    aadharNumber:    aadharNumber || null,
+    bankAccountNumber,
+    ifscCode,
+    residingState:   residingState || null,
+    supervisorId,
+    subordinates:    [],
+    isDummy:         false,
+    createdAt:       serverTimestamp(),
+    position
+  };
+  if (position === 'officer') {
+    userDoc.designation     = designation;
+    userDoc.associatedWith  = associatedWith;
+    userDoc.teachingSubject = teachingSubject;
+  }
+
+  // 5) write to Firestore
+  await setDoc(doc(db, 'users', userCred.user.uid), userDoc);
+
+  // 6) notify
+  toast.success(
+    `Registration successful! Your Company ID: ${newCompanyId}`,
+    { position: 'top-center', autoClose: 4000 }
+  );
+}
+
+
 export default function LoginPage() {
   const [position,           setPosition]           = useState("");
   const [isNew,              setIsNew]              = useState(false);
@@ -125,9 +195,18 @@ export default function LoginPage() {
   const [designation,        setDesignation]        = useState('');
   const [associatedWith,     setAssociatedWith]     = useState('');
   const [teachingSubject,    setTeachingSubject]    = useState('');
+    const { profile, loading: authLoading } = useUserProfile();
+
 
   // Track which inputs are invalid (for red‐border highlighting):
   const [errors, setErrors] = useState({});
+
+  const [showDeclaration, setShowDeclaration] = useState(false);
+  const [showTour,        setShowTour]        = useState(false);
+  const [showWelcome,     setShowWelcome]     = useState(false);
+
+// temporarily hold the “toBeRegistered” form-data so we can trigger it
+  const [pendingRegistration, setPendingRegistration] = useState(null);
 
   // Dropdown options
   const positionOptions = [
@@ -170,126 +249,104 @@ export default function LoginPage() {
     setErrors({});
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setError('');
-    const newErrors = {};
-
-    if (isNew) {
-      // 1) Position is required
-      if (!position) {
-        newErrors.position = true;
-      }
-
-      // 2) Name/Email/Password/Confirm
-      if (!name.trim())       newErrors.name = true;
-      if (!email.trim())      newErrors.email = true;
-      if (!password)          newErrors.password = true;
-      if (!confirm)           newErrors.confirm = true;
-      if (password && confirm && password !== confirm) {
-        newErrors.password = true;
-        newErrors.confirm = true;
-      }
-
-      // 3) Mobile & WhatsApp always required
-      if (!mobileNumber.trim())     newErrors.mobileNumber = true;
-      if (!whatsappNumber.trim())   newErrors.whatsappNumber = true;
-
-      // 4) Bank Account & IFSC ALWAYS mandatory
-      if (!bankAccountNumber.trim()) newErrors.bankAccountNumber = true;
-      if (!ifscCode.trim())          newErrors.ifscCode         = true;
-
-      // 5) If "officer", then those extra fields are also required:
-      if (position === 'officer') {
-        if (!aadharNumber.trim())       newErrors.aadharNumber   = true;
-        if (!designation)               newErrors.designation    = true;
-        if (!associatedWith)            newErrors.associatedWith = true;
-        if (!teachingSubject)           newErrors.teachingSubject= true;
-        if (!residingState)             newErrors.residingState  = true;
-      }
-
-      // 6) If BD Consultant/Associate/Employee, Aadhar is OPTIONAL—no extra check.
-
-      // 7) If any errors: highlight and stop:
-      if (Object.keys(newErrors).length > 0) {
-        setErrors(newErrors);
-        setError("Please correct the highlighted fields.");
-        return;
-      }
-
-      // 8) Show a custom confirm‐dialog BEFORE registering
-      const declarationText = 
-`Declaration:
-I hereby declare that I am above 18 years of age and that I am legally competent to enter into this Collaboration Agreement. I voluntarily agree to collaborate with Yaswa Academy and to be bound by its terms and conditions, as may be amended from time to time.
-
-Press “OK” to Agree & Register Now, or “Cancel” to abort.`;
-      if (!window.confirm(declarationText)) {
-        return; // user cancelled
-      }
+  // 1️⃣ Login flow
+async function handleLoginAttempt() {
+  setError('');                         // clear any prior error
+  try {
+    // 1) validate email/password presence
+    if (!email.trim() || !password) {
+      setError('Please enter both email and password.');
+      return;
     }
 
-    try {
-      if (isNew) {
-        // --- REGISTER NEW USER ---
-        const userCred = await createUserWithEmailAndPassword(auth, email, password);
+    // 2) try to sign in
+    await signInWithEmailAndPassword(auth, email, password);
 
-        // 1) Find role & prefix
-        const { role: newRole, prefix } = positionOptions.find(o => o.value === position);
+    // 3) SHOW THE WELCOME MODAL instead of navigating immediately
+    setShowWelcome(true);
 
-        // 2) Generate sequential companyId
-        const newCompanyId = await generateNextCompanyId(prefix);
+  } catch (err) {
+    console.error(err);
+    setError(err.message);
+  }
+}
 
-        // 3) If role ∈ {employee, associate, businessDevelopmentConsultant}, auto‐assign under a dummy manager
-        let supervisorId = null;
-        if (['employee','associate','businessDevelopmentConsultant'].includes(newRole)) {
-          supervisorId = await assignUnderDummyManager(newCompanyId);
-        }
+// 2️⃣ Register flow
+function handleRegisterAttempt() {
+  setError('');
+  const newErrors = {};
 
-        // 4) Build Firestore doc payload
-        const userDoc = {
-          name,
-          email,
-          role:               newRole,
-          companyId:          newCompanyId,
-          mobileNumber,
-          whatsappNumber,
-          aadharNumber:      aadharNumber || null,
-          bankAccountNumber,
-          ifscCode,
-          residingState:     residingState || null,
-          supervisorId,       // either null or dummy manager’s companyId
-          subordinates:      [],
-          isDummy:           false,
-          createdAt:         serverTimestamp(),
-          position
-        };
+  // 1) Position is required
+  if (!position) newErrors.position = true;
+  // 2) Name/email/password/confirm
+  if (!name.trim())        newErrors.name    = true;
+  if (!email.trim())       newErrors.email   = true;
+  if (!password)           newErrors.password= true;
+  if (!confirm)            newErrors.confirm = true;
+  if (password && confirm && password !== confirm) {
+    newErrors.password = newErrors.confirm = true;
+  }
+  // 3) Mobile & WhatsApp
+  if (!mobileNumber.trim())   newErrors.mobileNumber   = true;
+  if (!whatsappNumber.trim()) newErrors.whatsappNumber = true;
+  // 4) Bank account & IFSC
+  if (!bankAccountNumber.trim()) newErrors.bankAccountNumber = true;
+  if (!ifscCode.trim())          newErrors.ifscCode         = true;
+  // 5) Officer extras
+  if (position === 'officer') {
+    if (!aadharNumber.trim())     newErrors.aadharNumber   = true;
+    if (!designation)             newErrors.designation    = true;
+    if (!associatedWith)          newErrors.associatedWith = true;
+    if (!teachingSubject)         newErrors.teachingSubject= true;
+    if (!residingState)           newErrors.residingState  = true;
+  }
 
-        if (position === 'officer') {
-          userDoc.designation     = designation;
-          userDoc.associatedWith  = associatedWith;
-          userDoc.teachingSubject = teachingSubject;
-        }
+  // bail on validation errors
+  if (Object.keys(newErrors).length > 0) {
+    setErrors(newErrors);
+    setError('Please correct the highlighted fields.');
+    return;
+  }
 
-        // 5) Write user document
-        await setDoc(doc(db, 'users', userCred.user.uid), userDoc);
+    const { role: newRole, prefix } = positionOptions.find(o => o.value === position);
 
-        // 6) Show toast with companyId
-        toast.success(`Registration successful! Your Company ID: ${newCompanyId}`, {
-          position: "top-center",
-          autoClose: 4000
-        });
-      } else {
-        // --- LOG IN EXISTING USER ---
-        await signInWithEmailAndPassword(auth, email, password);
-      }
 
-      resetForm();
-      navigate('/profile');
-    } catch (err) {
-      console.error(err);
-      setError(err.message);
-    }
-  };
+  // stash the data for later
+  setPendingRegistration({
+    position,
+    name,
+    email,
+    password,
+    mobileNumber,
+    whatsappNumber,
+    aadharNumber,
+    bankAccountNumber,
+    ifscCode,
+    residingState,
+    designation,
+    associatedWith,
+    teachingSubject,
+     newRole,
+    prefix,
+    // pass newRole + prefix now so doActualRegistration can use them
+    ...(positionOptions.find(o => o.value === position) || {}),
+  });
+
+  // show the Declaration popup
+  setShowDeclaration(true);
+}
+
+
+// 3️⃣ Unified submit handler
+function handleSubmit(e) {
+  e.preventDefault();
+  if (isNew) {
+    handleRegisterAttempt();
+  } else {
+    handleLoginAttempt();
+  }
+}
+
 
   // Whenever the user blurs the mobile‐number field, if WhatsApp is empty, ask if we should copy it:
   const handleMobileBlur = () => {
@@ -302,7 +359,100 @@ Press “OK” to Agree & Register Now, or “Cancel” to abort.`;
   };
 
   return (
+    
     <div className="min-h-screen bg-gradient-to-br from-[#8a1ccf]/80 to-[#8a1ccf]/60 flex items-center justify-center px-4">
+      <Modal
+  isOpen={showDeclaration}
+  onRequestClose={() => setShowDeclaration(false)}
+  className="max-w-md mx-auto mt-20 bg-white p-6 rounded shadow-lg"
+  overlayClassName="fixed inset-0 bg-black bg-opacity-50"
+>
+  <h3 className="text-xl font-bold mb-4">Declaration</h3>
+  <p className="mb-6 whitespace-pre-line">
+    {`I hereby declare that I am above 18 years of age ... 
+Press “Agree” to continue with registration.`}
+  </p>
+  <div className="flex justify-end space-x-2">
+    <button
+      onClick={() => {
+        setShowDeclaration(false);
+        setPendingRegistration(null);
+      }}
+      className="px-4 py-2 bg-gray-300 rounded"
+    >Cancel</button>
+    <button
+      onClick={() => {
+       setShowDeclaration(false);
+    setShowTour(true);
+      }}
+      className="px-4 py-2 bg-green-600 text-white rounded"
+    >Agree</button>
+  </div>
+</Modal>
+
+
+<Modal
+  isOpen={showTour}
+  onRequestClose={() => setShowTour(false)}
+  className="max-w-lg mx-auto mt-20 bg-white p-6 rounded shadow-lg"
+  overlayClassName="fixed inset-0 bg-black bg-opacity-50"
+>
+  <h3 className="text-xl font-bold mb-4">Quick Tour</h3>
+  <ul className="list-disc pl-5 text-gray-700 mb-6">
+    <li><strong>Submit Sales Report</strong>: Submit your Sales reports here.</li>
+    <li><strong>My Sales Reports Status</strong>: Track the satus of you sales reports here .</li>
+    <li><strong>Downloads</strong>: Here Grab your own customized Visiting card, brochure and Your Offer Letter.</li>
+    <li><strong>Bulletin</strong>: Company Updates and News .</li>
+        <li><strong>Training</strong>: Get your Training Documents and Video links at Bulletin Tab. </li>
+                <li><strong>Profile</strong>: You can view & update your personal info here. </li>
+                        <li><strong>Payment History</strong>: You can view your past records of payments here. </li>
+
+
+
+    {/* …add as many as you like… */}
+  </ul>
+  <button
+  onClick={async () => {
+    setShowTour(false);
+    // actually register with the stashed data
+    const newId = await doActualRegistration(pendingRegistration);
+    setPendingRegistration(null);
+    toast.success(`Registration successful! Your Company ID: ${newId}`);
+    setIsNew(false);        // switch back to login view
+  }}
+  className="px-4 py-2 bg-indigo-600 text-white rounded"
+>
+  Got it!
+</button>
+</Modal>
+
+
+<Modal
+  isOpen={showWelcome}
+  onRequestClose={() => {
+    setShowWelcome(false);
+    navigate('/profile');
+  }}
+  className="max-w-sm mx-auto mt-20 bg-white p-6 rounded shadow-lg"
+  overlayClassName="fixed inset-0 bg-black bg-opacity-50"
+>
+  <h3 className="text-xl font-bold mb-4">Welcome!</h3>
+  {profile ? (
+    <p className="mb-6">Hello {profile.name}, welcome to Yaswa Sales!</p>
+  ) : (
+    <p className="mb-6">Welcome to Yaswa Sales!</p>
+  )}
+  <button
+    onClick={() => {
+      setShowWelcome(false);
+      navigate('/profile');
+    }}
+    className="px-4 py-2 bg-indigo-600 text-white rounded"
+  >
+    Let’s Go
+  </button>
+</Modal>
+
       <div className="bg-white rounded-2xl shadow-xl max-w-4xl w-full flex overflow-hidden">
         <div className="w-full md:w-1/2 max-h-[90vh] overflow-y-auto p-8">
         <br />

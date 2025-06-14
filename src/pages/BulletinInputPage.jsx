@@ -1,10 +1,10 @@
 // src/pages/BulletinInputPage.jsx
 
 import React, { useState, useEffect } from 'react';
-import { Navigate }             from 'react-router-dom';
-import { useUserProfile }       from '../hooks/useUserProfile';
+import { Navigate }                   from 'react-router-dom';
+import { useUserProfile }             from '../hooks/useUserProfile';
 import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
-import { storage, db }          from '../firebase';
+import { storage, db }                from '../firebase';
 import {
   ref as storageRef,
   uploadBytes,
@@ -12,21 +12,21 @@ import {
 } from 'firebase/storage';
 
 const ALL_ROLES = [
-  { label: 'Education Counseller',     value: 'employee' },
-    { label: 'Sales Associate',        value: 'associate' },
-  { label: 'Business Development Counseller',  value: 'businessDevelopmentCounseller' },
-  { label: 'Team Lead',                value: 'manager' },
-  { label: 'Telecaller/Sales manager',             value: 'telecaller' },
+  { label: 'Education Counseller',    value: 'employee' },
+  { label: 'Sales Associate',         value: 'associate' },
+  { label: 'Business Development Counseller', value: 'businessDevelopmentCounseller' },
+  { label: 'Team Lead',               value: 'manager' },
+  { label: 'Telecaller/Sales Manager',value: 'telecaller' },
   { label: 'Senior Manager',          value: 'businessHead' },
-  { label: 'Sales Head',      value: 'salesHead' },
-  { label: 'Admin',                  value: 'admin' },
-  // …etc, add any other custom roles you use…
+  { label: 'Sales Head',              value: 'salesHead' },
+  { label: 'Admin',                   value: 'admin' },
 ];
 
 export default function BulletinInputPage() {
   const { profile, loading } = useUserProfile();
 
   // form state
+  const [title, setTitle]             = useState('');
   const [contentType, setContentType] = useState('text');
   const [textContent, setTextContent] = useState('');
   const [linkContent, setLinkContent] = useState('');
@@ -47,6 +47,7 @@ export default function BulletinInputPage() {
   }
 
   const resetForm = () => {
+    setTitle('');
     setTextContent('');
     setLinkContent('');
     setPhotoFile(null);
@@ -56,17 +57,18 @@ export default function BulletinInputPage() {
     setSuccessMsg('');
   };
 
-  const handlePhotoChange = e => {
-    setPhotoFile(e.target.files[0] || null);
-  };
-  const handleDocChange = e => {
-    setDocFile(e.target.files[0] || null);
-  };
+  const handlePhotoChange = e => { setPhotoFile(e.target.files[0] || null); }
+  const handleDocChange   = e => { setDocFile(e.target.files[0] || null); }
 
   const handlePublish = async e => {
     e.preventDefault();
     setErrorMsg(''); setSuccessMsg('');
 
+    // Title required
+    if (!title.trim()) {
+      setErrorMsg('Please enter a title.');
+      return;
+    }
     if (!selectedRoles.length) {
       setErrorMsg('Please select at least one role.');
       return;
@@ -96,10 +98,10 @@ export default function BulletinInputPage() {
       }
       setUploading(true);
       try {
-        const filename = `bulletin_photo_${Date.now()}_${photoFile.name}`;
-        const refStorage = storageRef(storage, `bulletin_photos/${filename}`);
+        const filename    = `bulletin_photo_${Date.now()}_${photoFile.name}`;
+        const refStorage  = storageRef(storage, `bulletin_photos/${filename}`);
         await uploadBytes(refStorage, photoFile);
-        finalContent = await getDownloadURL(refStorage);
+        finalContent     = await getDownloadURL(refStorage);
       } catch (err) {
         console.error(err);
         setErrorMsg('Photo upload failed.');
@@ -115,10 +117,10 @@ export default function BulletinInputPage() {
       }
       setUploading(true);
       try {
-        const filename = `bulletin_doc_${Date.now()}_${docFile.name}`;
-        const refStorage = storageRef(storage, `bulletin_documents/${filename}`);
+        const filename    = `bulletin_doc_${Date.now()}_${docFile.name}`;
+        const refStorage  = storageRef(storage, `bulletin_documents/${filename}`);
         await uploadBytes(refStorage, docFile);
-        finalContent = await getDownloadURL(refStorage);
+        finalContent     = await getDownloadURL(refStorage);
       } catch (err) {
         console.error(err);
         setErrorMsg('Document upload failed.');
@@ -130,6 +132,7 @@ export default function BulletinInputPage() {
 
     try {
       await addDoc(collection(db, 'bulletins'), {
+        title:       title.trim(),
         contentType: finalType,
         content:     finalContent,
         roles:       selectedRoles,
@@ -151,6 +154,19 @@ export default function BulletinInputPage() {
       {successMsg && <div className="mb-4 text-green-700 bg-green-100 px-3 py-2 rounded">{successMsg}</div>}
 
       <form onSubmit={handlePublish} className="space-y-6">
+        {/* Title */}
+        <div>
+          <label className="block text-sm font-medium">Title</label>
+          <input
+            type="text"
+            value={title}
+            onChange={e => setTitle(e.target.value)}
+            className="mt-1 w-full border-gray-300 rounded-md shadow-sm px-3 py-2"
+            placeholder="Enter bulletin title…"
+            required
+          />
+        </div>
+
         {/* Content Type */}
         <div>
           <label className="block text-sm font-medium">Content Type</label>

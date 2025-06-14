@@ -1,5 +1,4 @@
 // src/pages/BusinessHeadView.jsx
-
 import React, { useEffect, useState, useRef } from 'react';
 import { useLocation, Navigate } from 'react-router-dom';
 import { useUserProfile } from '../hooks/useUserProfile';
@@ -27,164 +26,165 @@ export default function BusinessHeadView() {
   const [rangeType, setRangeType] = useState('today');
   const [customRange, setCustomRange] = useState({ start: null, end: null });
 
-  // Compute start/end timestamps
-  const computeRange = () => {
+  // Normalize preset + custom into Firestore Timestamps
+  function getDateRange(type, custom) {
     const now = new Date();
-    let start = null, end = null;
-    switch (rangeType) {
-      case 'today':
-        start = new Date(now.setHours(0, 0, 0, 0));
-        end = new Date(now.setHours(23, 59, 59, 999));
-        break;
-      case 'yesterday': {
-        const d = new Date();
-        d.setDate(d.getDate() - 1);
-        start = new Date(d.setHours(0, 0, 0, 0));
-        end = new Date(d.setHours(23, 59, 59, 999));
-        break;
-      }
-      case 'thisWeek': {
-        const d = new Date();
-        const day = d.getDay();
-        const diffStart = d.getDate() - day + (day === 0 ? -6 : 1);
-        start = new Date(d.setDate(diffStart)); start.setHours(0, 0, 0, 0);
-        end = new Date(); end.setHours(23, 59, 59, 999);
-        break;
-      }
-      case 'thisMonth': {
-        const d = new Date();
-        start = new Date(d.getFullYear(), d.getMonth(), 1);
-        end = new Date(d.getFullYear(), d.getMonth() + 1, 0, 23, 59, 59, 999);
-        break;
-      }
-      case 'custom':
-        start = customRange.start;
-        end = customRange.end;
-        break;
-      default:
+    let start, end;
+
+    if (type === 'today') {
+      start = new Date(now); start.setHours(0,0,0,0);
+      end   = new Date(now); end.setHours(23,59,59,999);
+    } else if (type === 'yesterday') {
+      const d = new Date(now); d.setDate(d.getDate()-1);
+      start = new Date(d); start.setHours(0,0,0,0);
+      end   = new Date(d); end.setHours(23,59,59,999);
+    } else if (type === 'thisWeek') {
+      const day = now.getDay(), diff = (day+6)%7;
+      const mon = new Date(now);
+      mon.setDate(now.getDate() - diff);
+      start = new Date(mon); start.setHours(0,0,0,0);
+      end   = new Date(mon);
+      end.setDate(mon.getDate() + 6);
+      end.setHours(23,59,59,999);
+    } else if (type === 'thisMonth') {
+      start = new Date(now.getFullYear(), now.getMonth(), 1);
+      end   = new Date(now.getFullYear(), now.getMonth()+1, 0);
+      start.setHours(0,0,0,0);
+      end.setHours(23,59,59,999);
+    } else if (
+      type === 'custom' &&
+      custom.start instanceof Date &&
+      custom.end   instanceof Date
+    ) {
+      start = custom.start;
+      end   = custom.end;
+    } else {
+      start = new Date(0);
+      end   = now;
     }
+
     return {
-      start: start ? Timestamp.fromDate(start) : null,
-      end: end ? Timestamp.fromDate(end) : null
+      start: Timestamp.fromDate(start),
+      end:   Timestamp.fromDate(end)
     };
-  };
+  }
 
   useEffect(() => {
     if (authLoading) return;
-    // allow true BH or admin passing bhCompanyIdFromState
     if (profile?.role !== 'businessHead' && !bhCompanyIdFromState) return;
 
-    const { start, end } = computeRange();
-    if (!start || !end) return;
+    const { start, end } = getDateRange(rangeType, customRange);
 
     (async () => {
       setLoading(true);
+      let bhId = profile.companyId;
+      let telecallers = profile.telecallers || [];
 
-      // choose BH ID and telecallers
-      let bhCompanyId = profile.companyId;
-      let teleCompIds = profile.telecallers || [];
       if (bhCompanyIdFromState) {
-        bhCompanyId = bhCompanyIdFromState;
+        bhId = bhCompanyIdFromState;
         const bhSnap = await getDocs(
-          query(collection(db, 'users'), where('companyId', '==', bhCompanyId))
+          query(collection(db,'users'), where('companyId','==', bhId))
         );
         if (!bhSnap.empty) {
-          teleCompIds = bhSnap.docs[0].data().telecallers || [];
+          telecallers = bhSnap.docs[0].data().telecallers || [];
         }
       }
 
       const summary = [];
       employeeMapRef.current = {};
 
-      for (let tcCompId of teleCompIds) {
-        // fetch telecaller’s user document
+      for (let tcCid of telecallers) {
         const tcSnap = await getDocs(
-          query(collection(db, 'users'), where('companyId', '==', tcCompId))
+          query(collection(db,'users'), where('companyId','==', tcCid))
         );
         if (tcSnap.empty) continue;
         const tcData = tcSnap.docs[0].data();
         const teleName = tcData.name;
+        const managerCids = tcData.managing || [];
 
-        // managers under this telecaller
-        const managerCompIds = tcData.managing || [];
-        let employeeCompIds = [];
+        let approved=0, pending=0, rejected=0;
 
-        // --- FIRST: count each manager’s OWN reports in this date-range ---
-        let approved = 0, pending = 0, rejected = 0;
-        for (let mCid of managerCompIds) {
-          // Query manager’s own reports (companyId == mCid) in [start..end]
-          const mgrRptQ = query(
-            collection(db, 'reports'),
-            where('companyId', '==', mCid),
-            where('createdAt', '>=', start),
-            where('createdAt', '<=', end)
+        // count managers’ own reports
+        for (let mCid of managerCids) {
+          const rptSnap = await getDocs(
+            query(
+              collection(db,'reports'),
+              where('companyId','==', mCid),
+              where('createdAt','>=', start),
+              where('createdAt','<=', end)
+            )
           );
-          const mgrRptSnap = await getDocs(mgrRptQ);
-          mgrRptSnap.docs.forEach(d => {
+          rptSnap.docs.forEach(d => {
             const st = d.data().status?.toLowerCase();
-            if (st === 'approved') approved++;
-            else if (st === 'pending') pending++;
-            else if (st === 'rejected') rejected++;
+            if (st==='approved') approved++;
+            else if (st==='pending') pending++;
+            else if (st==='rejected') rejected++;
           });
         }
 
-        // Now gather all subordinates’ IDs and store manager/tele metadata
-        for (let i = 0; i < managerCompIds.length; i += 10) {
-          const chunk = managerCompIds.slice(i, i + 10);
-          const mSnap = await getDocs(
-            query(collection(db, 'users'), where('companyId', 'in', chunk))
+        // gather employees under each manager
+        const empCids = [];
+        for (let i = 0; i < managerCids.length; i += 10) {
+          const chunk = managerCids.slice(i, i + 10);
+          const userSnap = await getDocs(
+            query(collection(db,'users'), where('companyId','in', chunk))
           );
-          mSnap.docs.forEach(d => {
-            const m = d.data();
-            const mgrCompId = m.companyId;
-            const mgrName = m.name;
-            ;(m.subordinates || []).forEach(empCid => {
-              employeeCompIds.push(empCid);
+          userSnap.docs.forEach(d => {
+            const u = d.data();
+            const mgrId   = u.companyId;
+            const mgrName = u.name;
+            (u.subordinates || []).forEach(empCid => {
+              empCids.push(empCid);
               employeeMapRef.current[empCid] = {
-                managerCompId: mgrCompId,
-                managerName: mgrName,
-                teleCompId: tcCompId,
+                managerCompId: mgrId,
+                managerName:   mgrName,
+                teleCompId:    tcCid,
                 teleName
               };
             });
           });
         }
 
-        // --- SECOND: count subordinates’ reports in this date-range ---
-        for (let i = 0; i < employeeCompIds.length; i += 10) {
-          const chunk = employeeCompIds.slice(i, i + 10);
-          const rSnap = await getDocs(
-            query(collection(db, 'reports'),
-              where('companyId', 'in', chunk),
-              where('createdAt', '>=', start),
-              where('createdAt', '<=', end)
+        // count subordinates’ reports
+        for (let i = 0; i < empCids.length; i += 10) {
+          const chunk = empCids.slice(i, i + 10);
+          const rptSnap = await getDocs(
+            query(
+              collection(db,'reports'),
+              where('companyId','in', chunk),
+              where('createdAt','>=', start),
+              where('createdAt','<=', end)
             )
           );
-          rSnap.docs.forEach(d => {
+          rptSnap.docs.forEach(d => {
             const st = d.data().status?.toLowerCase();
-            if (st === 'approved') approved++;
-            else if (st === 'pending') pending++;
-            else if (st === 'rejected') rejected++;
+            if (st==='approved') approved++;
+            else if (st==='pending') pending++;
+            else if (st==='rejected') rejected++;
           });
         }
 
-        const total = approved + pending + rejected;
         summary.push({
           teleName,
           approved,
           pending,
           rejected,
-          total,
-          incentive: total * 100
+          total: approved + pending + rejected,
+          incentive: (approved + pending + rejected) * 100
         });
       }
 
       setData(summary);
       setLoading(false);
     })();
-  }, [authLoading, profile, bhCompanyIdFromState, rangeType, customRange]);
+  }, [
+    authLoading,
+    profile,
+    bhCompanyIdFromState,
+    rangeType,
+    customRange
+  ]);
 
-  // render guards
   if (authLoading || loading) {
     return <p className="p-6">Loading Business Head View…</p>;
   }
@@ -193,98 +193,108 @@ export default function BusinessHeadView() {
   }
 
   const handleDownload = async () => {
-    const { start, end } = computeRange();
+    const { start, end } = getDateRange(rangeType, customRange);
     const rows = [];
-    const teleCompIds = profile.telecallers || [];
-    for (let tcCompId of teleCompIds) {
+
+    for (let tcCid of (profile.telecallers||[])) {
       const tcSnap = await getDocs(
-        query(collection(db, 'users'), where('companyId', '==', tcCompId))
+        query(collection(db,'users'), where('companyId','==', tcCid))
       );
       if (tcSnap.empty) continue;
-      const managerCompIds = tcSnap.docs[0].data().managing || [];
-      let employeeCompIds = [];
-      managerCompIds.forEach(mgrCid => {
-        const mData = tcSnap.docs[0].data();
-        ;(mData.subordinates || []).forEach(empCid => {
-          employeeCompIds.push(empCid);
-        });
+      const managerCids = tcSnap.docs[0].data().managing || [];
+      const empCids = [];
+
+      managerCids.forEach(mgrCid => {
+        const u = tcSnap.docs[0].data();
+        (u.subordinates||[]).forEach(empCid => empCids.push(empCid));
       });
 
-      for (let i = 0; i < employeeCompIds.length; i += 10) {
-        const chunk = employeeCompIds.slice(i, i + 10);
-        const rSnap = await getDocs(
-          query(collection(db, 'reports'),
-            where('companyId', 'in', chunk),
-            where('createdAt', '>=', start),
-            where('createdAt', '<=', end)
+      for (let i = 0; i < empCids.length; i += 10) {
+        const chunk = empCids.slice(i, i + 10);
+        const rptSnap = await getDocs(
+          query(
+            collection(db,'reports'),
+            where('companyId','in', chunk),
+            where('createdAt','>=', start),
+            where('createdAt','<=', end)
           )
         );
-        rSnap.docs.forEach(d => {
+        rptSnap.docs.forEach(d => {
           const rpt = d.data();
-          const empCid = rpt.companyId;
-          const meta = employeeMapRef.current[empCid] || {};
+          const meta = employeeMapRef.current[rpt.companyId] || {};
           rows.push({
             reportId: d.id,
-            studentName: rpt.studentName,
-            studentPhone: rpt.studentPhone,
-            course: rpt.course,
-            status: rpt.status,
-            createdAt: rpt.createdAt.toDate().toLocaleString(),
-            employeeCompanyId: empCid,
-            managerCompanyId: meta.managerCompId || '',
-            managerName: meta.managerName || '',
+            studentName:       rpt.studentName,
+            studentPhone:      rpt.studentPhone,
+            course:            rpt.course,
+            status:            rpt.status,
+            createdAt:         rpt.createdAt.toDate().toLocaleString(),
+            employeeCompanyId: rpt.companyId,
+            managerCompanyId:  meta.managerCompId || '',
+            managerName:       meta.managerName  || '',
             telecallerCompanyId: meta.teleCompId || '',
-            telecallerName: meta.teleName || '',
-            incentive: 100
+            telecallerName:      meta.teleName   || '',
+            incentive:           100
           });
         });
       }
     }
+
     const ws = XLSX.utils.json_to_sheet(rows);
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, 'Reports');
-    const wbout = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
-    saveAs(new Blob([wbout], { type: 'application/octet-stream' }), 'businesshead_reports.xlsx');
+    const blob = new Blob([XLSX.write(wb,{bookType:'xlsx',type:'array'})], {
+      type:'application/octet-stream'
+    });
+    saveAs(blob,'businesshead_reports.xlsx');
   };
 
   return (
     <div className="p-6">
-      <br />
-      <br />
       <h2 className="text-2xl font-bold mb-4">
-  {profile.name} ({profile.companyId})'s Dashboard
-</h2>
-      <DateRangePicker
-        value={rangeType}
-        onChangeType={setRangeType}
-        customRange={customRange}
-        onChangeCustom={setCustomRange}
-      />
+        {profile.name} ({profile.companyId})’s Dashboard
+      </h2>
+
+      <div className="mb-4 max-w-md">
+        <DateRangePicker
+          value={rangeType}
+          onChangeType={setRangeType}
+          customRange={customRange}
+          onChangeCustom={delta =>
+            setCustomRange(prev => ({ ...prev, ...delta }))
+          }
+        />
+      </div>
+
       <button
         onClick={handleDownload}
-        className="mt-4 mb-4 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+        className="mb-4 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
       >
         Download Reports
       </button>
+
       <div className="overflow-x-auto bg-white rounded-lg shadow">
         <table className="min-w-full divide-y divide-gray-200">
           <thead className="bg-gray-100">
             <tr>
               {['S.No','Manager-Sales','Approved','Pending','Rejected','Total'].map(h => (
-                <th key={h} className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                <th
+                  key={h}
+                  className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase"
+                >
                   {h}
                 </th>
               ))}
             </tr>
           </thead>
           <tbody className="bg-white divide-y divide-gray-200">
-            {data.map((r, i) => (
-              <tr key={i} className={i % 2 ? 'bg-gray-50' : ''}>
-                <td className="px-6 py-3 text-sm text-gray-800">{i + 1}</td>
+            {data.map((r,i) => (
+              <tr key={i} className={i%2 ? 'bg-gray-50' : ''}>
+                <td className="px-6 py-3 text-sm text-gray-800">{i+1}</td>
                 <td className="px-6 py-3 text-sm text-gray-800">{r.teleName}</td>
-                <td className="px-6 py-3 text-sm text-gray-800">{r.approved}</td>
-                <td className="px-6 py-3 text-sm text-gray-800">{r.pending}</td>
-                <td className="px-6 py-3 text-sm text-gray-800">{r.rejected}</td>
+                <td className="px-6 py-3 text-sm text-green-600 font-semibold">{r.approved}</td>
+                <td className="px-6 py-3 text-sm text-yellow-600 font-semibold">{r.pending}</td>
+                <td className="px-6 py-3 text-sm text-red-600 font-semibold">{r.rejected}</td>
                 <td className="px-6 py-3 text-sm text-gray-800">{r.total}</td>
               </tr>
             ))}

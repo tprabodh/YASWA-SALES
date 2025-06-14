@@ -23,6 +23,44 @@ export default function MyBusinessHeadsPage() {
   const [rows,        setRows]        = useState([]);
   const [loading,     setLoading]     = useState(true);
 
+   function getDateRange(type, custom) {
+    const now = new Date();
+    let start, end;
+
+    if (type === 'today') {
+      start = new Date(now); start.setHours(0,0,0,0);
+      end   = new Date(now); end.setHours(23,59,59,999);
+
+    } else if (type === 'yesterday') {
+      const d = new Date(now); d.setDate(d.getDate()-1);
+      start = new Date(d); start.setHours(0,0,0,0);
+      end   = new Date(d); end.setHours(23,59,59,999);
+
+    } else if (type === 'thisWeek') {
+      const day = now.getDay(), diff=(day+6)%7;
+      const mon = new Date(now); mon.setDate(now.getDate()-diff);
+      start = new Date(mon); start.setHours(0,0,0,0);
+      end   = new Date(mon); end.setDate(mon.getDate()+6); end.setHours(23,59,59,999);
+
+    } else if (type === 'thisMonth') {
+      start = new Date(now.getFullYear(), now.getMonth(), 1);
+      end   = new Date(now.getFullYear(), now.getMonth()+1, 0);
+      start.setHours(0,0,0,0); end.setHours(23,59,59,999);
+
+    } else if (type === 'custom' 
+        && custom.start instanceof Date 
+        && custom.end   instanceof Date) {
+      start = custom.start;
+      end   = custom.end;
+
+    } else {
+      start = new Date(0);
+      end   = now;
+    }
+    return { start, end };
+  }
+
+
   // Compute JS dates + Firestore Timestamps
   const { start: jsStart, end: jsEnd } = getDateRange(dateType, customRange);
   const bStart = Timestamp.fromDate(jsStart);
