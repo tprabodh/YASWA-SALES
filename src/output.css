@@ -674,6 +674,9 @@
   .bg-\[\#160000\] {
     background-color: #160000;
   }
+  .bg-\[8a1ccf\] {
+    background-color: 8a1ccf;
+  }
   .bg-black {
     background-color: var(--color-black);
   }
@@ -739,6 +742,9 @@
   }
   .bg-red-500 {
     background-color: var(--color-red-500);
+  }
+  .bg-red-600 {
+    background-color: var(--color-red-600);
   }
   .bg-teal-500 {
     background-color: var(--color-teal-500);
@@ -1136,6 +1142,13 @@
       }
     }
   }
+  .hover\:bg-green-100 {
+    &:hover {
+      @media (hover: hover) {
+        background-color: var(--color-green-100);
+      }
+    }
+  }
   .hover\:bg-green-600 {
     &:hover {
       @media (hover: hover) {
@@ -1175,6 +1188,13 @@
     &:hover {
       @media (hover: hover) {
         background-color: var(--color-indigo-700);
+      }
+    }
+  }
+  .hover\:bg-indigo-800 {
+    &:hover {
+      @media (hover: hover) {
+        background-color: var(--color-indigo-800);
       }
     }
   }
@@ -1220,6 +1240,13 @@
       }
     }
   }
+  .hover\:bg-white {
+    &:hover {
+      @media (hover: hover) {
+        background-color: var(--color-white);
+      }
+    }
+  }
   .hover\:bg-yellow-500 {
     &:hover {
       @media (hover: hover) {
@@ -1238,6 +1265,20 @@
     &:hover {
       @media (hover: hover) {
         background-color: var(--color-yellow-700);
+      }
+    }
+  }
+  .hover\:text-\[\#8a1ccf\] {
+    &:hover {
+      @media (hover: hover) {
+        color: #8a1ccf;
+      }
+    }
+  }
+  .hover\:text-black {
+    &:hover {
+      @media (hover: hover) {
+        color: var(--color-black);
       }
     }
   }

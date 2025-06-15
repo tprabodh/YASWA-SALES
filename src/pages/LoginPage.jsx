@@ -369,8 +369,7 @@ function handleSubmit(e) {
 >
   <h3 className="text-xl font-bold mb-4">Declaration</h3>
   <p className="mb-6 whitespace-pre-line">
-    {`I hereby declare that I am above 18 years of age ... 
-Press “Agree” to continue with registration.`}
+    {`I hereby declare that I am above 18 years of age and that I am legally competent to enter into this Collaboration Agreement. I voluntarily agree to collaborate with Yaswa Academy and to be bound by its terms and conditions, as may be amended from time to time.`}
   </p>
   <div className="flex justify-end space-x-2">
     <button
@@ -378,15 +377,15 @@ Press “Agree” to continue with registration.`}
         setShowDeclaration(false);
         setPendingRegistration(null);
       }}
-      className="px-4 py-2 bg-gray-300 rounded"
-    >Cancel</button>
+      className="px-4 py-2 bg-red-600 rounded"
+    >Don't Agree & Cancel</button>
     <button
       onClick={() => {
        setShowDeclaration(false);
     setShowTour(true);
       }}
       className="px-4 py-2 bg-green-600 text-white rounded"
-    >Agree</button>
+    >Agree & Register Now</button>
   </div>
 </Modal>
 
@@ -399,18 +398,32 @@ Press “Agree” to continue with registration.`}
 >
   <h3 className="text-xl font-bold mb-4">Quick Tour</h3>
   <ul className="list-disc pl-5 text-gray-700 mb-6">
-    <li><strong>Submit Sales Report</strong>: Submit your Sales reports here.</li>
-    <li><strong>My Sales Reports Status</strong>: Track the satus of you sales reports here .</li>
-    <li><strong>Downloads</strong>: Here Grab your own customized Visiting card, brochure and Your Offer Letter.</li>
-    <li><strong>Bulletin</strong>: Company Updates and News .</li>
-        <li><strong>Training</strong>: Get your Training Documents and Video links at Bulletin Tab. </li>
-                <li><strong>Profile</strong>: You can view & update your personal info here. </li>
-                        <li><strong>Payment History</strong>: You can view your past records of payments here. </li>
+    <p>
+      <li><strong>1.Download from "DOWNLOAD" Tab</strong></li>
+    <li>•	Offer Letter</li>
+    <li>•	Visiting Card</li>
+    <li>•	Posters, Flyers & Social Media Creatives (with your name & number)</li>
+    </p>
+    
+     <p>
+      <li><strong>2.	Go to "BULLETIN" Tab</strong></li>
+    <li>•	Product & Sales PDFs</li>
+    <li>•	Training YouTube Links</li>
+    </p>
 
+     <p>
+      <li><strong>3.	Portal Training Videos</strong></li>
+    <li>Watch on YouTube to learn how to use the app effectively</li>
+    </p>
 
+     <p>
+      <li><strong>4.	Daily Live Training</strong></li>
+    <li>•	Learn about the company, product, and how to achieve your monthly goals</li>
+    </p>
 
-    {/* …add as many as you like… */}
-  </ul>
+    <p>You're all set to begin.
+Stay consistent. Sell smart. Grow fast.</p>
+     </ul>
   <button
   onClick={async () => {
     setShowTour(false);
@@ -420,7 +433,7 @@ Press “Agree” to continue with registration.`}
     toast.success(`Registration successful! Your Company ID: ${newId}`);
     setIsNew(false);        // switch back to login view
   }}
-  className="px-4 py-2 bg-indigo-600 text-white rounded"
+  className="px-4 py-2 bg-[#8a1ccf] text-white rounded"
 >
   Got it!
 </button>
@@ -438,7 +451,7 @@ Press “Agree” to continue with registration.`}
 >
   <h3 className="text-xl font-bold mb-4">Welcome!</h3>
   {profile ? (
-    <p className="mb-6">Hello {profile.name}, welcome to Yaswa Sales!</p>
+    <p className="mb-6">Hello <strong>{profile.name}</strong>, welcome to Yaswa Sales! You're now part of a growing team helping students succeed in <strong>NEET UG & JEE MAINS</strong> with our trusted mock exam packages.</p>
   ) : (
     <p className="mb-6">Welcome to Yaswa Sales!</p>
   )}
@@ -447,7 +460,7 @@ Press “Agree” to continue with registration.`}
       setShowWelcome(false);
       navigate('/profile');
     }}
-    className="px-4 py-2 bg-indigo-600 text-white rounded"
+    className="px-4 py-2 bg-[#8a1ccf] text-white rounded hover:bg-indigo-800 "
   >
     Let’s Go
   </button>
