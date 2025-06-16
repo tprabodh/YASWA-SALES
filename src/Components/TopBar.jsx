@@ -206,7 +206,7 @@ export default function TopBar() {
                   to="/reports"
                   className={({ isActive }) =>
                     `px-3 py-1 rounded ${
-                      isActive ? 'bg-[#8a1ccf]-600 text-white' : 'text-gray-700 hover:bg-indigo-100'
+                      isActive ? 'bg-[#8a1ccf] text-white' : 'text-gray-700 hover:bg-indigo-100'
                     }`
                   }
                 >

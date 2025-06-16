@@ -162,6 +162,7 @@ export default function MyBusinessHeadsPage() {
   if (!Array.isArray(profile.myBusinessHeads) || profile.myBusinessHeads.length === 0) {
     return (
       <div className="p-6">
+        <br /><br />
         <h2 className="text-2xl font-bold mb-4">My Business Heads</h2>
         <p className="text-gray-500">You have not been assigned any Business Heads.</p>
       </div>
@@ -175,8 +176,8 @@ export default function MyBusinessHeadsPage() {
     }
     const sheetData = rows.map(r => ({
       'S.No':            r.bhCid,    // placeholder—XLSX ignores key ordering
-      'BusinessHeadID':  r.bhCid,
-      'BusinessHeadName':r.bhName,
+      'senior manager ID':  r.bhCid,
+      'senior manager Name':r.bhName,
       'Total Reports':   r.total,
       'Approved':        r.approved,
       'Pending':         r.pending,
@@ -211,7 +212,7 @@ export default function MyBusinessHeadsPage() {
         <table className="min-w-full divide-y divide-gray-200">
           <thead className="bg-gray-100">
             <tr>
-              {['S.No','BusinessHeadID','BusinessHeadName','Total Reports','Approved','Pending','Rejected'].map(col => (
+              {['S.No','Senior Manager ID','Senior Manager Name','Total Reports','Approved','Pending','Rejected'].map(col => (
                 <th key={col} className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
                   {col}
                 </th>

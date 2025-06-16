@@ -159,13 +159,14 @@ export default function PaymentHistoryPage() {
       if (!docSnap.empty) {
         const r = docSnap.docs[0].data();
         rows.push({
-          'Report ID':    rid,
           'Student Name': r.studentName || '',
+                    'Student phone': r.studentPhone || '',
           Grade:          r.grade || '',
           Course:         r.course || '',
           Status:         r.status || '',
           'Created At':   r.createdAt?.toDate().toLocaleString() || '',
           'Paid At':      entry.paidAt.toDate().toLocaleString(),
+                    'Manager Id': r.managerId || '',
         });
       }
     }
