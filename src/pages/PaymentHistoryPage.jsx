@@ -20,38 +20,29 @@ import { Navigate }                  from 'react-router-dom';
 function getDateRange(type, custom) {
   const now = new Date();
   let start, end;
-
   if (type === 'today') {
-    start = new Date(now); start.setHours(0, 0, 0, 0);
-    end   = new Date(now); end.setHours(23, 59, 59, 999);
+    start = new Date(now); start.setHours(0,0,0,0);
+    end   = new Date(now); end.setHours(23,59,59,999);
   } else if (type === 'yesterday') {
-    const d = new Date(now);
-    d.setDate(d.getDate() - 1);
-    start = new Date(d); start.setHours(0, 0, 0, 0);
-    end   = new Date(d); end.setHours(23, 59, 59, 999);
+    const d = new Date(now); d.setDate(d.getDate()-1);
+    start = new Date(d); start.setHours(0,0,0,0);
+    end   = new Date(d); end.setHours(23,59,59,999);
   } else if (type === 'thisWeek') {
-    const day = now.getDay(),
-          diff = (day + 6) % 7;
-    start = new Date(now);
-    start.setDate(now.getDate() - diff);
-    start.setHours(0, 0, 0, 0);
-    end   = new Date(start);
-    end.setDate(start.getDate() + 6);
-    end.setHours(23, 59, 59, 999);
+    const day = now.getDay(), diff = (day+6)%7;
+    start = new Date(now); start.setDate(now.getDate()-diff); start.setHours(0,0,0,0);
+    end   = new Date(start); end.setDate(start.getDate()+6);    end.setHours(23,59,59,999);
   } else if (type === 'thisMonth') {
     start = new Date(now.getFullYear(), now.getMonth(), 1);
-    end   = new Date(now.getFullYear(), now.getMonth() + 1, 0);
-    start.setHours(0, 0, 0, 0);
-    end.setHours(23, 59, 59, 999);
+    end   = new Date(now.getFullYear(), now.getMonth()+1, 0);
+    start.setHours(0,0,0,0);
+    end.setHours(23,59,59,999);
   } else if (type === 'custom' && custom.start && custom.end) {
     start = custom.start;
     end   = custom.end;
   } else {
-    // fallback to today
-    start = new Date(now); start.setHours(0, 0, 0, 0);
-    end   = new Date(now); end.setHours(23, 59, 59, 999);
+    start = new Date(now); start.setHours(0,0,0,0);
+    end   = new Date(now); end.setHours(23,59,59,999);
   }
-
   return { start, end };
 }
 
@@ -62,78 +53,62 @@ export default function PaymentHistoryPage() {
   const [customRange, setCustomRange]      = useState({ start: null, end: null });
   const [loadingData, setLoadingData]      = useState(true);
 
-  // ─────────────────────────────────────────────────────────
   useEffect(() => {
     if (loading) return;
-
-    // Only these roles may view payment history
-    const allowedRoles = ['employee', 'associate', 'businessDevelopmentConsultant'];
-    if (!profile || !allowedRoles.includes(profile.role)) {
+    const allowed = ['employee','associate','businessDevelopmentConsultant'];
+    if (!profile || !allowed.includes(profile.role)) {
       setLoadingData(false);
       return;
     }
 
     (async () => {
       setLoadingData(true);
-
-      // 1) Fetch all runs where my companyId is in subordinateIds
       const histSnap = await getDocs(
         query(
-          collection(db, 'paymentHistory'),
-          where('subordinateIds', 'array-contains', profile.companyId)
+          collection(db,'paymentHistory'),
+          where('subordinateIds','array-contains',profile.companyId)
         )
       );
-      const rawHistory = histSnap.docs.map(d => ({ id: d.id, ...d.data() }));
-      const computed   = [];
+      const raw = histSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+      const comp = [];
 
-      // 2) For each run, re‐count exactly how many of this user’s reports 
-      //    (companyId === my ID) in that run’s [start..end] have paymentStatus & managerCommission both "paid"
-      for (let entry of rawHistory) {
-        const startDate = entry.dateRange.start.toDate();
-        const endDate   = entry.dateRange.end.toDate();
-        const tsStart   = Timestamp.fromDate(startDate);
-        const tsEnd     = Timestamp.fromDate(endDate);
+      for (let entry of raw) {
+        const { start, end } = entry.dateRange;
+        const tsStart = Timestamp.fromDate(start.toDate());
+        const tsEnd   = Timestamp.fromDate(end.toDate());
 
         const snaps = await getDocs(
           query(
-            collection(db, 'reports'),
-            where('companyId', '==', profile.companyId),
-            where('createdAt', '>=', tsStart),
-            where('createdAt', '<=', tsEnd),
-            where('paymentStatus', '==', 'paid'),
-            where('managerCommission', '==', 'paid')
+            collection(db,'reports'),
+            where('companyId','==',profile.companyId),
+            where('createdAt','>=',tsStart),
+            where('createdAt','<=',tsEnd),
+            where('paymentStatus','==','paid'),
+            where('managerCommission','==','paid')
           )
         );
-        const paidReports = snaps.docs.map(d => ({ id: d.id, ...d.data() }));
-
-        computed.push({
+        const paid = snaps.docs.map(d=>({ id:d.id, ...d.data() }));
+        comp.push({
           id: entry.id,
           dateRange: entry.dateRange,
           paidAt: entry.paidAt,
-          numberOfReports: paidReports.length,
-          paidReportIds: paidReports.map(r => r.id)
+          numberOfReports: paid.length,
+          paidReportIds: paid.map(r=>r.id)
         });
       }
 
-      // 3) Sort by paidAt descending
-      computed.sort((a, b) => b.paidAt.toMillis() - a.paidAt.toMillis());
-
-      setHistoryEntries(computed);
+      comp.sort((a,b)=>b.paidAt.toMillis()-a.paidAt.toMillis());
+      setHistoryEntries(comp);
       setLoadingData(false);
     })();
   }, [loading, profile, dateType, customRange]);
 
-
-  // ─────────────────────────────────────────────────────────
-  // Redirect if not allowed role
   if (!loading) {
-    const allowedRoles = ['employee', 'associate', 'businessDevelopmentConsultant'];
-    if (!profile || !allowedRoles.includes(profile.role)) {
-      return <Navigate to="/YASWA-SALES/" replace />;
+    const allowed = ['employee','associate','businessDevelopmentConsultant'];
+    if (!profile || !allowed.includes(profile.role)) {
+      return <Navigate to="/" replace />;
     }
   }
-
-  // Show spinner until both auth and data finish loading
   if (loading || loadingData) {
     return (
       <div className="flex items-center justify-center h-screen">
@@ -142,31 +117,30 @@ export default function PaymentHistoryPage() {
     );
   }
 
-  // Build a filename base for Excel download
   const buildFilenameBase = (range) => {
-    const toIso = d => d.toISOString().slice(0, 10);
-    const s = toIso(range.start.toDate()), e = toIso(range.end.toDate());
-    return profile.companyId + '_' + (s === e ? s : `${s}_to_${e}`);
+    const iso = d=>d.toISOString().slice(0,10);
+    const s = iso(range.start.toDate()), e = iso(range.end.toDate());
+    return profile.companyId + '_' + (s===e?s:`${s}_to_${e}`);
   };
 
-  // Download handler
   const handleDownloadReports = async (entry) => {
     const rows = [];
     for (let rid of entry.paidReportIds) {
       const docSnap = await getDocs(
-        query(collection(db, 'reports'), where('__name__', '==', rid))
+        query(collection(db,'reports'), where('__name__','==',rid))
       );
       if (!docSnap.empty) {
         const r = docSnap.docs[0].data();
         rows.push({
           'Student Name': r.studentName || '',
-                    'Student phone': r.studentPhone || '',
+                    'Student Phone': r.studentPhone || '',
           Grade:          r.grade || '',
           Course:         r.course || '',
           Status:         r.status || '',
           'Created At':   r.createdAt?.toDate().toLocaleString() || '',
           'Paid At':      entry.paidAt.toDate().toLocaleString(),
-                    'Manager Id': r.managerId || '',
+          'Manager Id':   r.managerId || '',
+          'Incentives':   "₹2000"
         });
       }
     }
@@ -179,27 +153,19 @@ export default function PaymentHistoryPage() {
     XLSX.writeFile(wb, `${buildFilenameBase(entry.dateRange)}_my_reports.xlsx`);
   };
 
-
-  // ─────────────────────────────────────────────────────────
   return (
     <div className="min-h-screen bg-gray-50 p-6">
-        <br /><br />
       <ToastContainer
         position="top-center"
         autoClose={3000}
         hideProgressBar={false}
-        newestOnTop={false}
-        closeOnClick
-        rtl={false}
-        pauseOnFocusLoss
-        draggable
         pauseOnHover
       />
 
-<h2 className="text-2xl font-bold mb-4">
-  {profile.name} ({profile.companyId})'s Payment History
-</h2>
-      {/* Date‐range selector */}
+      <h2 className="text-2xl font-bold mb-4">
+        {profile.name} ({profile.companyId})'s Payment History
+      </h2>
+
       <div className="mb-4 max-w-md">
         <DateRangePicker
           value={dateType}
@@ -215,7 +181,13 @@ export default function PaymentHistoryPage() {
         <table className="min-w-full divide-y divide-gray-200">
           <thead className="bg-gray-100">
             <tr>
-              {['Paid Date/Period','Paid On','Total Reports','Actions'].map(h => (
+              {[
+                'Paid Date/Period',
+                'Paid On',
+                'Total Reports',
+                'My Incentives',
+                'Actions'
+              ].map(h => (
                 <th
                   key={h}
                   className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase"
@@ -228,10 +200,7 @@ export default function PaymentHistoryPage() {
           <tbody className="bg-white divide-y divide-gray-200">
             {historyEntries.length === 0 ? (
               <tr>
-                <td
-                  colSpan={4}
-                  className="px-6 py-4 text-center text-gray-500"
-                >
+                <td colSpan={5} className="px-6 py-4 text-center text-gray-500">
                   No payment history found.
                 </td>
               </tr>
@@ -239,8 +208,15 @@ export default function PaymentHistoryPage() {
               historyEntries.map((entry, idx) => {
                 const s = entry.dateRange.start.toDate();
                 const e = entry.dateRange.end.toDate();
+                const incentive = entry.numberOfReports * 2000;
                 return (
-                  <tr key={entry.id} className={idx % 2 ? 'bg-gray-50' : ''}>
+                  <tr
+                    key={entry.id}
+                    className={`
+                      ${idx % 2 ? 'bg-gray-50' : ''}
+                      hover:bg-gray-100
+                    `}
+                  >
                     <td className="px-6 py-3 text-sm text-gray-800">
                       {s.toLocaleDateString()} – {e.toLocaleDateString()}
                     </td>
@@ -249,6 +225,9 @@ export default function PaymentHistoryPage() {
                     </td>
                     <td className="px-6 py-3 text-sm text-gray-800">
                       {entry.numberOfReports}
+                    </td>
+                    <td className="px-6 py-3 text-sm text-green-700 font-semibold">
+                      ₹{incentive.toLocaleString()}
                     </td>
                     <td className="px-6 py-3 text-sm">
                       <button
