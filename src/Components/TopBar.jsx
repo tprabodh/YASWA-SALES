@@ -272,7 +272,7 @@ export default function TopBar() {
                 }`
               }
             >
-              Downloads
+              Personal Downloads
             </NavLink>
 
             <NavLink
@@ -283,7 +283,7 @@ export default function TopBar() {
                 }`
               }
             >
-              Bulletin
+              Common Downloads
             </NavLink>
             <NavLink
               to="/profile"
@@ -496,14 +496,14 @@ export default function TopBar() {
               onClick={closeMenu}
               className="block text-gray-700 hover:text-blue-600 px-3 py-2 rounded-md text-base font-medium"
             >
-              DOWNLOADS
+              PERSONAL DOWNLOADS
             </NavLink>
              <NavLink
               to="/bulletins"
               onClick={closeMenu}
               className="block text-gray-700 hover:text-blue-600 px-3 py-2 rounded-md text-base font-medium"
             >
-              BULLETIN
+              COMMON DOWNLOADS
             </NavLink>
             <NavLink
               to="/profile"
