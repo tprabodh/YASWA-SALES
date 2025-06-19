@@ -159,13 +159,12 @@ export default function DownloadsPage() {
         <h2 className="text-2xl font-bold text-center">Your Personal Documents</h2>
 
         <div>
-          <label className="block text-sm font-medium mb-1">Choose Document</label>
           <select
             value={sel?.id || ''}
             onChange={e => setSel(templates.find(t => t.id === e.target.value) || null)}
             className="w-full border rounded p-2"
           >
-            <option value="">— Select —</option>
+            <option value="">Select a Document to download</option>
             {options.map(t => (
               <option key={t.id} value={t.id}>{t.name}</option>
             ))}
