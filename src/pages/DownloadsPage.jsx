@@ -42,20 +42,20 @@ const STAMP_CONFIG_DEFAULT = {
 
 // map internal roles to friendly labels
 const ROLE_LABELS = {
-  employee:                         'Education Counsellor',
-  associate:                        'Sales Associate',
-  businessDevelopmentConsultant:    'Business Development Consultant',
-  telecaller:                       'Telecaller',
-  manager:                          'Team Lead',
-  businessHead:                     'Senior Manager',
-  salesHead:                        'Sales Head',
+  employee:                      'Education Counsellor',
+  associate:                     'Sales Associate',
+  businessDevelopmentConsultant: 'Business Development Consultant',
+  telecaller:                    'Telecaller',
+  manager:                       'Team Lead',
+  businessHead:                  'Senior Manager',
+  salesHead:                     'Sales Head',
 };
 
 export default function DownloadsPage() {
   const { profile, loading }      = useUserProfile();
   const [templates, setTemplates] = useState([]);
   const [sel, setSel]             = useState(null);
-  const [stampConfig, setStampConfig] = useState(STAMP_CONFIG_DEFAULT);
+  const [stampConfig]             = useState(STAMP_CONFIG_DEFAULT);
   const canvasRef                 = useRef();
 
   // load all templates once
@@ -68,50 +68,68 @@ export default function DownloadsPage() {
     })();
   }, []);
 
-  if (loading)    return <p className="p-6 text-center">Loading…</p>;
-  if (!profile)   return <p className="p-6 text-red-500">Not authorized.</p>;
+  if (loading)  return <p className="p-6 text-center">Loading…</p>;
+  if (!profile) return <p className="p-6 text-red-500">Not authorized.</p>;
 
-  // only show templates that include this role
-  const options = templates.filter(t => t.roles?.includes(profile.role));
+  // only show templates this user can download:
+  const options = templates.filter(t => {
+    // 1) regular role match
+    if (t.roles?.includes(profile.role)) return true;
+
+    // 2) special telecallerGroup logic
+    if (
+      profile.role === 'telecaller' &&
+      // only if their stored profile.position is telecaller or managerSales
+      ['telecaller','managerSales'].includes(profile.position) &&
+      t.roles?.includes('telecallerGroup') &&
+      t.subRoles?.includes(profile.position)
+    ) {
+      return true;
+    }
+
+    return false;
+  });
 
   const handleDownload = async () => {
     if (!sel) return;
 
     // IMAGE TEMPLATES
     if (sel.templateType === 'visitingCard' || sel.templateType === 'brochure') {
-      const cfg = stampConfig[sel.templateType] || STAMP_CONFIG_DEFAULT[sel.templateType];
+      const cfg = stampConfig[sel.templateType];
       const img = new Image();
       img.crossOrigin = 'anonymous';
       img.src = sel.url;
       img.onload = () => {
-        const c = canvasRef.current;
-        c.width  = img.width;
-        c.height = img.height;
+        const c   = canvasRef.current;
+        c.width   = img.width;
+        c.height  = img.height;
         const ctx = c.getContext('2d');
         ctx.drawImage(img, 0, 0);
 
-        // always stamp name first
+        // name
         ctx.fillStyle = cfg.color;
         ctx.font      = `${cfg.boldName ? 'bold ' : ''}${cfg.nameSize}px ${cfg.fontFamily}`;
         ctx.textAlign = 'left';
-        const [nx, ny] = cfg.namePos;
-        ctx.fillText(profile.name, nx, ny < 0 ? img.height + ny : ny);
+        let [x,y]     = cfg.namePos;
+        ctx.fillText(profile.name, x, y < 0 ? img.height + y : y);
 
-        // if visiting card, stamp role and phone
         if (sel.templateType === 'visitingCard') {
+          // role
           const roleLabel = ROLE_LABELS[profile.role] || profile.role;
           ctx.font = `${cfg.boldRole ? 'bold ' : ''}${cfg.roleSize}px ${cfg.fontFamily}`;
-          const [rx, ry] = cfg.rolePos;
-          ctx.fillText(roleLabel, rx, ry < 0 ? img.height + ry : ry);
+          [x,y] = cfg.rolePos;
+          ctx.fillText(roleLabel, x, y < 0 ? img.height + y : y);
 
+          // phone
           ctx.font = `${cfg.boldPhone ? 'bold ' : ''}${cfg.phoneSize}px ${cfg.fontFamily}`;
-          const [px, py] = cfg.phonePos;
-          ctx.fillText(profile.mobileNumber, px, py < 0 ? img.height + py : py);
+          [x,y] = cfg.phonePos;
+          ctx.fillText(profile.mobileNumber, x, y < 0 ? img.height + y : y);
+
         } else {
-          // brochure: stamp phone only
+          // brochure: only phone
           ctx.font = `${cfg.boldPhone ? 'bold ' : ''}${cfg.phoneSize}px ${cfg.fontFamily}`;
-          const [px, py] = cfg.phonePos;
-          ctx.fillText(profile.mobileNumber, px, py < 0 ? img.height + py : py);
+          [x,y] = cfg.phonePos;
+          ctx.fillText(profile.mobileNumber, x, y < 0 ? img.height + y : y);
         }
 
         c.toBlob(blob => {
@@ -122,18 +140,18 @@ export default function DownloadsPage() {
       return;
     }
 
-    // DOCX templates (agreements, etc.)
+    // DOCX templates
     try {
       const res = await fetch(sel.url);
       const buf = await res.arrayBuffer();
       const zip = new PizZip(buf);
       const doc = new Docxtemplater(zip, { paragraphLoop: true, linebreaks: true });
 
-      // format today’s date as dd-mm-yyyy
-      const d = new Date();
-      const dd = String(d.getDate()).padStart(2, '0');
-      const mm = String(d.getMonth() + 1).padStart(2, '0');
-      const yyyy = d.getFullYear();
+      // today as dd-mm-yyyy
+      const d   = new Date();
+      const dd  = String(d.getDate()).padStart(2,'0');
+      const mm  = String(d.getMonth()+1).padStart(2,'0');
+      const yyyy= d.getFullYear();
       const today = `${dd}-${mm}-${yyyy}`;
 
       doc.setData({
@@ -144,40 +162,37 @@ export default function DownloadsPage() {
       });
       doc.render();
 
-      const out = doc.getZip().generate({ type: 'blob' });
+      const out = doc.getZip().generate({ type:'blob' });
       saveAs(out, `${sel.templateType}_${profile.companyId}.docx`);
-    } catch (err) {
+
+    } catch(err) {
       alert('Error generating document: ' + err.message);
     }
   };
 
- 
-
   return (
     <div className="min-h-screen bg-gray-50 flex items-center justify-center p-6">
       <div className="bg-white shadow-lg rounded-lg max-w-md w-full p-6 space-y-6">
+        
         <h2 className="text-2xl font-bold text-center">Your Personal Documents</h2>
 
         <div>
           <select
-            value={sel?.id || ''}
-            onChange={e => setSel(templates.find(t => t.id === e.target.value) || null)}
+            value={sel?.id||''}
+            onChange={e => setSel(templates.find(t=>t.id===e.target.value)||null)}
             className="w-full border rounded p-2"
           >
-            <option value="">Select a Document to download</option>
-            {options.map(t => (
+            <option value="">— Select a Document to Download —</option>
+            {options.map(t=>(
               <option key={t.id} value={t.id}>{t.name}</option>
             ))}
           </select>
         </div>
 
-
         {sel && (
           <div className="flex items-center space-x-4 p-4 bg-gray-100 rounded">
-            {(sel.templateType === 'visitingCard' || sel.templateType === 'brochure') ? (
-              <img
-                src={sel.url}
-                alt="preview"
+            {(sel.templateType==='visitingCard'||sel.templateType==='brochure') ? (
+              <img src={sel.url} alt="preview"
                 className="w-24 h-24 object-cover rounded border"
               />
             ) : (

@@ -24,16 +24,33 @@ export default function BulletinPage() {
 
   useEffect(() => {
     if (loading || !profile) return;
+
     (async () => {
       setLoadingData(true);
-      const snap = await getDocs(
-        query(
-          collection(db, 'bulletins'),
-          where('roles', 'array-contains', profile.role),
-          orderBy('createdAt', 'desc')
-        )
+
+      // 1) Fetch bulletins that either include your role or were posted for the telecallerGroup
+      const q = query(
+        collection(db, 'bulletins'),
+        where('roles', 'array-contains-any', [profile.role, 'telecallerGroup']),
+        orderBy('createdAt', 'desc')
       );
-      setBulletins(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+      const snap = await getDocs(q);
+      const all = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+
+      // 2) Filter:
+      //    - If the bulletin explicitly includes your role → always show
+      //    - Otherwise, if it includes telecallerGroup, only show if subRoles matches your position
+      const visible = all.filter(b => {
+        if (b.roles.includes(profile.role)) {
+          return true;
+        }
+        if (b.roles.includes('telecallerGroup')) {
+          return Array.isArray(b.subRoles) && b.subRoles.includes(profile.position);
+        }
+        return false;
+      });
+
+      setBulletins(visible);
       setLoadingData(false);
     })();
   }, [loading, profile]);
@@ -54,10 +71,11 @@ export default function BulletinPage() {
 
   return (
     <div className="p-6 max-w-3xl mx-auto space-y-6">
-      <h2 className="text-3xl font-bold text-indigo-600">Latest Bulletins</h2>
+      <br /><br />
+      <h2 className="text-3xl font-bold text-indigo-600">TRAINING MODULE</h2>
 
       {bulletins.length === 0 ? (
-        <p className="text-gray-500">No bulletins available.</p>
+        <p className="text-gray-500">No TRAINING MODULES</p>
       ) : (
         <div className="space-y-4">
           {bulletins.map(b => (
@@ -66,7 +84,7 @@ export default function BulletinPage() {
               className="flex flex-col md:flex-row items-start md:items-center bg-white rounded-xl shadow-lg overflow-hidden hover:shadow-2xl transition p-4"
             >
               <div className="flex-1">
-                {/* 1️⃣ Title */}
+                {/* Title */}
                 <h3 className="text-xl font-semibold text-gray-800 mb-1">
                   {b.title}
                 </h3>
@@ -74,7 +92,7 @@ export default function BulletinPage() {
                   Posted: {b.createdAt?.toDate().toLocaleString() || '–'}
                 </p>
 
-                {/* Previews */}
+                {/* Content preview */}
                 {b.contentType === 'text' && (
                   <p
                     className="text-gray-800 mb-2"
@@ -84,7 +102,9 @@ export default function BulletinPage() {
                       WebkitBoxOrient: 'vertical',
                       overflow: 'hidden'
                     }}
-                  >{b.content}</p>
+                  >
+                    {b.content}
+                  </p>
                 )}
 
                 {b.contentType === 'link' && (
@@ -98,38 +118,38 @@ export default function BulletinPage() {
                   </a>
                 )}
 
-                {b.contentType === 'photo' && (
-                  <p className="text-gray-800 mb-2 italic">Image Bulletin</p>
-                )}
-
-               
+                
 
                 {/* Actions */}
                 <div className="space-x-2">
-                  {/* View & Download for text and photo */}
                   {(b.contentType === 'text' || b.contentType === 'photo') && (
                     <>
                       <button
                         onClick={() => openModal(b)}
                         className="px-3 py-1 bg-indigo-500 text-white rounded hover:bg-indigo-600 text-sm"
-                      >View</button>
+                      >
+                        View
+                      </button>
                       {b.contentType === 'text' && (
                         <button
                           onClick={() => downloadText(b.content, b.id)}
                           className="px-3 py-1 bg-green-500 text-white rounded hover:bg-green-600 text-sm"
-                        >Download</button>
+                        >
+                          Download
+                        </button>
                       )}
                       {b.contentType === 'photo' && (
                         <a
                           href={b.content}
                           download
                           className="px-3 py-1 bg-green-500 text-white rounded hover:bg-green-600 text-sm"
-                        >Download</a>
+                        >
+                          Download
+                        </a>
                       )}
                     </>
                   )}
 
-                  {/* For document: View and Download */}
                   {b.contentType === 'document' && (
                     <>
                       <a
@@ -137,18 +157,21 @@ export default function BulletinPage() {
                         target="_blank"
                         rel="noopener noreferrer"
                         className="px-3 py-1 bg-indigo-500 text-white rounded hover:bg-indigo-600 text-sm"
-                      >View</a>
+                      >
+                        View
+                      </a>
                       <a
                         href={b.content}
                         download
                         className="px-3 py-1 bg-green-500 text-white rounded hover:bg-green-600 text-sm"
-                      >Download</a>
+                      >
+                        Download
+                      </a>
                     </>
                   )}
                 </div>
               </div>
 
-              {/* Thumbnail for photo */}
               {b.contentType === 'photo' && (
                 <div className="w-16 h-16 md:w-24 md:h-24 overflow-hidden rounded ml-0 md:ml-4 mt-4 md:mt-0 flex-shrink-0">
                   <img
@@ -163,7 +186,7 @@ export default function BulletinPage() {
         </div>
       )}
 
-      {/* Modal for text/photo view */}
+      {/* Modal for text/photo */}
       <Modal
         isOpen={!!modalContent}
         onRequestClose={closeModal}
@@ -173,10 +196,16 @@ export default function BulletinPage() {
           <button
             onClick={closeModal}
             className="text-gray-500 hover:text-gray-700 float-right"
-          >✕</button>
+          >
+            ✕
+          </button>
 
           {modalContent?.contentType === 'photo' && (
-            <img src={modalContent.content} alt="full" className="w-full h-auto rounded" />
+            <img
+              src={modalContent.content}
+              alt="full"
+              className="w-full h-auto rounded"
+            />
           )}
           {modalContent?.contentType === 'text' && (
             <div className="prose">

@@ -210,14 +210,14 @@ export default function LoginPage() {
 
   // Dropdown options
   const positionOptions = [
-    { label: "Educational Counselor(Lecturers)",              value: "officer",       role: "employee",                       prefix: "EC" },
+    { label: "Educational Counselor(LECTURER)",              value: "officer",       role: "employee",                       prefix: "EC" },
     { label: "Telecaller",                       value: "telecaller",    role: "telecaller",                     prefix: "TC" },
-        { label: "Manager-Sales",                       value: "telecaller",    role: "telecaller",                     prefix: "TC" },
+        { label: "Manager-Sales",                       value: "managerSales",    role: "telecaller",                     prefix: "TC" },
     { label: "Team Lead",                    value: "manager",       role: "manager",                        prefix: "TL" },
    /* { label: "Business Head",                    value: "businessHead",  role: "businessHead",                   prefix: "YH" },
         { label: "Sales Head",     value: "salesHead",     role: "salesHead",                      prefix: "SH" }, */
 
-    { label: "Sales Associate(Freshers)",                  value: "associate",     role: "associate",                      prefix: "SA" },
+    { label: "Sales Associate(FRESHER)",                  value: "associate",     role: "associate",                      prefix: "SA" },
     { label: "Business Development Consultant",          value: "bdConsultant",  role: "businessDevelopmentConsultant",  prefix: "BC" },
   ];
 
@@ -272,46 +272,59 @@ async function handleLoginAttempt() {
 }
 
 // 2️⃣ Register flow
-function handleRegisterAttempt() {
+async function handleRegisterAttempt() {
   setError('');
   const newErrors = {};
 
-  // 1) Position is required
+  // 1) Position
   if (!position) newErrors.position = true;
-  // 2) Name/email/password/confirm
-  if (!name.trim())        newErrors.name    = true;
-  if (!email.trim())       newErrors.email   = true;
-  if (!password)           newErrors.password= true;
-  if (!confirm)            newErrors.confirm = true;
+
+  // 2) Name / Email / Password / Confirm
+  if (!name.trim())     newErrors.name     = true;
+  if (!email.trim())    newErrors.email    = true;
+  if (!password)        newErrors.password = true;
+  if (!confirm)         newErrors.confirm  = true;
   if (password && confirm && password !== confirm) {
     newErrors.password = newErrors.confirm = true;
   }
-  // 3) Mobile & WhatsApp
-  if (!mobileNumber.trim())   newErrors.mobileNumber   = true;
-  if (!whatsappNumber.trim()) newErrors.whatsappNumber = true;
-  // 4) Bank account & IFSC
-  if (!bankAccountNumber.trim()) newErrors.bankAccountNumber = true;
-  if (!ifscCode.trim())          newErrors.ifscCode         = true;
-  // 5) Officer extras
-  if (position === 'officer') {
-    if (!aadharNumber.trim())     newErrors.aadharNumber   = true;
-    if (!designation)             newErrors.designation    = true;
-    if (!associatedWith)          newErrors.associatedWith = true;
-    if (!teachingSubject)         newErrors.teachingSubject= true;
-    if (!residingState)           newErrors.residingState  = true;
+
+  // 2a) Email format
+  if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    newErrors.email = true;
   }
 
-  // bail on validation errors
+  // 3) Mobile & WhatsApp must each be exactly 10 digits
+  if (!/^\d{10}$/.test(mobileNumber))   newErrors.mobileNumber   = true;
+  if (!/^\d{10}$/.test(whatsappNumber)) newErrors.whatsappNumber = true;
+
+  // 4) Bank account: 9–18 digits
+  if (!/^\d{9,18}$/.test(bankAccountNumber)) newErrors.bankAccountNumber = true;
+
+  // 5) IFSC (usually alphanumeric, 11 chars) – you already require non‑empty,
+  if (!/^[A-Za-z0-9]{11}$/.test(ifscCode)) {
+    newErrors.ifscCode = true;
+  }
+  
+  //    you can optionally validate a pattern here if desired.
+
+  // 6) Officer extras
+  if (position === 'officer') {
+    if (!/^\d+$/.test(aadharNumber || '')) newErrors.aadharNumber = true;
+    if (!designation)      newErrors.designation    = true;
+    if (!associatedWith)   newErrors.associatedWith = true;
+    if (!teachingSubject)  newErrors.teachingSubject= true;
+    if (!residingState)    newErrors.residingState  = true;
+  }
+
+  // Bail on any errors
   if (Object.keys(newErrors).length > 0) {
     setErrors(newErrors);
     setError('Please correct the highlighted fields.');
     return;
   }
 
-    const { role: newRole, prefix } = positionOptions.find(o => o.value === position);
-
-
-  // stash the data for later
+  // Everything validated → stash for the dialog:
+  const cfg = positionOptions.find(o => o.value === position) || {};
   setPendingRegistration({
     position,
     name,
@@ -326,15 +339,13 @@ function handleRegisterAttempt() {
     designation,
     associatedWith,
     teachingSubject,
-     newRole,
-    prefix,
-    // pass newRole + prefix now so doActualRegistration can use them
-    ...(positionOptions.find(o => o.value === position) || {}),
+    newRole: cfg.role,
+    prefix:  cfg.prefix,
   });
 
-  // show the Declaration popup
   setShowDeclaration(true);
 }
+
 
 
 // 3️⃣ Unified submit handler

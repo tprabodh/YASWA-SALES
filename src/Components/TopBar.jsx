@@ -1,7 +1,7 @@
 // src/components/TopBar.jsx
 
 import React, { useState } from 'react';
-import { NavLink, useNavigate } from 'react-router-dom';
+import { NavLink, useNavigate, Link } from 'react-router-dom';
 import { auth }                 from '../firebase';
 import { signOut }              from 'firebase/auth';
 import { useUserProfile }       from '../hooks/useUserProfile';
@@ -36,15 +36,15 @@ export default function TopBar() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between h-16">
           {/* Logo */}
-          <div className="flex-shrink-0 flex items-center">
-            <img
-              src={logo}
-              alt="Logo"
-              width={250}
-              height={250}
-              className="h-8 w-auto object-contain"
-            />
-          </div>
+       <div className="flex-shrink-0 flex items-center">
+  <Link to="/profile">
+    <img
+      src={logo}
+      alt="Yaswa Sales"
+      className="h-15 w-auto object-contain transition-transform duration-200 hover:scale-110 cursor-pointer"
+    />
+  </Link>
+</div>
 
           {/* Desktop Menu */}
           <div className="hidden md:flex md:items-center md:space-x-4">
@@ -272,7 +272,7 @@ export default function TopBar() {
                 }`
               }
             >
-              Personal Downloads
+              Personal Documents
             </NavLink>
 
             <NavLink
@@ -283,7 +283,7 @@ export default function TopBar() {
                 }`
               }
             >
-              Common Downloads
+              Training Module
             </NavLink>
             <NavLink
               to="/profile"
@@ -496,14 +496,14 @@ export default function TopBar() {
               onClick={closeMenu}
               className="block text-gray-700 hover:text-blue-600 px-3 py-2 rounded-md text-base font-medium"
             >
-              PERSONAL DOWNLOADS
+              PERSONAL DOCUMENTS
             </NavLink>
              <NavLink
               to="/bulletins"
               onClick={closeMenu}
               className="block text-gray-700 hover:text-blue-600 px-3 py-2 rounded-md text-base font-medium"
             >
-              COMMON DOWNLOADS
+              TRAINING MODULE
             </NavLink>
             <NavLink
               to="/profile"

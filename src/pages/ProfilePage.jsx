@@ -7,13 +7,14 @@ import { db }                from '../firebase';
 
 // Map internal roles to friendly labels
 const roleLabels = {
-  employee: 'Educational Counselor(Lecturer)',
-  associate: 'Sales Associate(Fresher)',
-  manager: 'Team Lead',
-  businessHead: 'Senior Manager',
-  telecaller: 'Manager-Sales',
-  salesHead: 'Sales Head',
-  businessDevelopmentConsultant: 'Business Development Consultant'
+  employee:                        'Educational Counselor (Lecturer)',
+  associate:                       'Sales Associate (Fresher)',
+  manager:                         'Team Lead',
+  businessHead:                    'Senior Manager',
+  telecaller:                      'Telecaller',
+  managerSales:                    'Manager‐Sales',
+  salesHead:                       'Sales Head',
+  businessDevelopmentConsultant:   'Business Development Consultant'
 };
 
 export default function ProfilePage() {
@@ -37,11 +38,11 @@ export default function ProfilePage() {
   // Initialize form when profile loads
   useEffect(() => {
     if (!loading && profile) {
-      const m = profile.mobileNumber || '';
+      const m = profile.mobileNumber   || '';
       const w = profile.whatsappNumber || '';
-      const a = profile.aadharNumber || '';
+      const a = profile.aadharNumber   || '';
       const b = profile.bankAccountNumber || '';
-      const i = profile.ifscCode || '';
+      const i = profile.ifscCode       || '';
 
       setPhone(m);
       setWhatsapp(w);
@@ -62,31 +63,63 @@ export default function ProfilePage() {
 
   // Dirty if anything changed
   const isDirty =
-    phone !== origPhone ||
-    whatsapp !== origWhatsapp ||
-    aadhar !== origAadhar ||
-    bank !== origBank ||
-    ifsc !== origIfsc;
+    phone     !== origPhone ||
+    whatsapp  !== origWhatsapp ||
+    aadhar    !== origAadhar ||
+    bank      !== origBank ||
+    ifsc      !== origIfsc;
 
   const handleSave = async () => {
     if (!isDirty) return;
+
+    // ── Validations ──────────────────────────────────────────────
+    if (!/^\d{10}$/.test(phone)) {
+      alert('Phone number must be exactly 10 digits.');
+      return;
+    }
+    if (!/^\d{10}$/.test(whatsapp)) {
+      alert('WhatsApp number must be exactly 10 digits.');
+      return;
+    }
+    if (aadhar && !/^\d{12}$/.test(aadhar)) {
+      alert('Aadhar number must be exactly 12 digits.');
+      return;
+    }
+    if (!/^[A-Za-z0-9]{9,18}$/.test(bank)) {
+      alert('Bank account number must be 9–18 alphanumeric characters.');
+      return;
+    }
+    if (!/^[A-Za-z0-9]{11}$/.test(ifsc)) {
+      alert('IFSC code must be exactly 11 alphanumeric characters.');
+      return;
+    }
+    // ─────────────────────────────────────────────────────────────
+
     setSaving(true);
-    const userRef = doc(db, 'users', profile.uid);
-    await updateDoc(userRef, {
-      mobileNumber:   phone,
-      whatsappNumber: whatsapp,
-      aadharNumber:   aadhar,
-      bankAccountNumber: bank,
-      ifscCode:       ifsc
-    });
-    // Sync originals
-    setOrigPhone(phone);
-    setOrigWhatsapp(whatsapp);
-    setOrigAadhar(aadhar);
-    setOrigBank(bank);
-    setOrigIfsc(ifsc);
-    setSaving(false);
-    alert('Profile updated.');
+    try {
+      const userRef = doc(db, 'users', profile.uid);
+      await updateDoc(userRef, {
+        mobileNumber:      phone,
+        whatsappNumber:    whatsapp,
+        aadharNumber:      aadhar || null,
+        bankAccountNumber: bank,
+        ifscCode:          ifsc
+      });
+
+      // Sync originals
+      setOrigPhone(phone);
+      setOrigWhatsapp(whatsapp);
+      setOrigAadhar(aadhar);
+      setOrigBank(bank);
+      setOrigIfsc(ifsc);
+
+      alert('Profile updated.');
+    } catch (err) {
+      console.error(err);
+      alert('Failed to update profile: ' + err.message);
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
@@ -98,25 +131,22 @@ export default function ProfilePage() {
             My Profile
           </h2>
 
-          {/* Read-only fields */}
+          {/* Read‑only fields */}
           <div className="space-y-4 mb-8">
             <div>
               <label className="block text-sm font-medium text-gray-600">Name</label>
               <p className="mt-1 text-lg font-medium text-gray-800">{profile.name}</p>
             </div>
-
             <div>
               <label className="block text-sm font-medium text-gray-600">Role</label>
               <p className="mt-1 text-lg font-medium text-gray-800">
-                {roleLabels[profile.role] || profile.role}
+                {roleLabels[profile.position] || roleLabels[profile.role] || profile.role}
               </p>
             </div>
-
             <div>
               <label className="block text-sm font-medium text-gray-600">Email</label>
               <p className="mt-1 text-lg font-medium text-gray-800">{profile.email}</p>
             </div>
-
             <div>
               <label className="block text-sm font-medium text-gray-600">Consultant ID</label>
               <p className="mt-1 text-lg font-medium text-gray-800">{profile.companyId}</p>
