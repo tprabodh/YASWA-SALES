@@ -19,22 +19,36 @@ const STAMP_CONFIG_DEFAULT = {
     color:      '#ffffff',
     fontFamily: 'sans-serif',
     boldName:   true,
-    boldId:     true,
+    boldRole:   true,
+    boldPhone:  false,
     nameSize:   40,
-    idSize:     36,
+    roleSize:   36,
+    phoneSize:  36,
     namePos:    [560, 105],
-    idPos:      [560, 155],
+    rolePos:    [560, 155],
+    phonePos:   [560, 205],
   },
   brochure: {
     color:      '#000000',
     fontFamily: 'sans-serif',
     boldName:   true,
-    boldId:     false,
+    boldPhone:  false,
     nameSize:   38,
-    idSize:     34,
+    phoneSize:  34,
     namePos:    [605, -80],
-    idPos:      [605, -30],
+    phonePos:   [605, -30],
   },
+};
+
+// map internal roles to friendly labels
+const ROLE_LABELS = {
+  employee:                         'Education Counsellor',
+  associate:                        'Sales Associate',
+  businessDevelopmentConsultant:    'Business Development Consultant',
+  telecaller:                       'Telecaller',
+  manager:                          'Team Lead',
+  businessHead:                     'Senior Manager',
+  salesHead:                        'Sales Head',
 };
 
 export default function DownloadsPage() {
@@ -76,25 +90,29 @@ export default function DownloadsPage() {
         const ctx = c.getContext('2d');
         ctx.drawImage(img, 0, 0);
 
-        // name stamp
+        // always stamp name first
         ctx.fillStyle = cfg.color;
         ctx.font      = `${cfg.boldName ? 'bold ' : ''}${cfg.nameSize}px ${cfg.fontFamily}`;
         ctx.textAlign = 'left';
         const [nx, ny] = cfg.namePos;
-        ctx.fillText(
-          profile.name,
-          nx,
-          ny < 0 ? img.height + ny : ny
-        );
+        ctx.fillText(profile.name, nx, ny < 0 ? img.height + ny : ny);
 
-        // id stamp
-        ctx.font = `${cfg.boldId ? 'bold ' : ''}${cfg.idSize}px ${cfg.fontFamily}`;
-        const [ix, iy] = cfg.idPos;
-        ctx.fillText(
-          profile.companyId,
-          ix,
-          iy < 0 ? img.height + iy : iy
-        );
+        // if visiting card, stamp role and phone
+        if (sel.templateType === 'visitingCard') {
+          const roleLabel = ROLE_LABELS[profile.role] || profile.role;
+          ctx.font = `${cfg.boldRole ? 'bold ' : ''}${cfg.roleSize}px ${cfg.fontFamily}`;
+          const [rx, ry] = cfg.rolePos;
+          ctx.fillText(roleLabel, rx, ry < 0 ? img.height + ry : ry);
+
+          ctx.font = `${cfg.boldPhone ? 'bold ' : ''}${cfg.phoneSize}px ${cfg.fontFamily}`;
+          const [px, py] = cfg.phonePos;
+          ctx.fillText(profile.mobileNumber, px, py < 0 ? img.height + py : py);
+        } else {
+          // brochure: stamp phone only
+          ctx.font = `${cfg.boldPhone ? 'bold ' : ''}${cfg.phoneSize}px ${cfg.fontFamily}`;
+          const [px, py] = cfg.phonePos;
+          ctx.fillText(profile.mobileNumber, px, py < 0 ? img.height + py : py);
+        }
 
         c.toBlob(blob => {
           saveAs(blob, `${sel.templateType}_${profile.companyId}.png`);
@@ -121,7 +139,7 @@ export default function DownloadsPage() {
       doc.setData({
         employeeName: profile.name,
         employeeId:   profile.companyId,
-        employeeRole: profile.role,
+        employeeRole: ROLE_LABELS[profile.role] || profile.role,
         date:         today,
       });
       doc.render();
@@ -133,103 +151,27 @@ export default function DownloadsPage() {
     }
   };
 
-  // only show templates allowed for this user
-  const renderConfigControls = () => {
-    if (!sel) return null;
-    const type = sel.templateType;
-    if (type !== 'visitingCard' && type !== 'brochure') return null;
-    const cfg = stampConfig[type];
-    return (
-      <div className="space-y-2">
-        <h3 className="font-medium">Stamp Settings ({type})</h3>
-        <div className="grid grid-cols-2 gap-4">
-          <div>
-            <label className="block text-sm">Name font size</label>
-            <input
-              type="number"
-              value={cfg.nameSize}
-              onChange={e => setStampConfig(s => ({
-                ...s,
-                [type]: { ...s[type], nameSize: +e.target.value }
-              }))}
-              className="w-full border rounded p-1"
-            />
-          </div>
-          <div>
-            <label className="block text-sm">ID font size</label>
-            <input
-              type="number"
-              value={cfg.idSize}
-              onChange={e => setStampConfig(s => ({
-                ...s,
-                [type]: { ...s[type], idSize: +e.target.value }
-              }))}
-              className="w-full border rounded p-1"
-            />
-          </div>
-          <div>
-            <label className="block text-sm">Font family</label>
-            <input
-              type="text"
-              value={cfg.fontFamily}
-              onChange={e => setStampConfig(s => ({
-                ...s,
-                [type]: { ...s[type], fontFamily: e.target.value }
-              }))}
-              className="w-full border rounded p-1"
-            />
-          </div>
-          <div className="flex items-center space-x-2">
-            <input
-              type="checkbox"
-              checked={cfg.boldName}
-              onChange={e => setStampConfig(s => ({
-                ...s,
-                [type]: { ...s[type], boldName: e.target.checked }
-              }))}
-            />
-            <label className="text-sm">Bold Name</label>
-          </div>
-          <div className="flex items-center space-x-2">
-            <input
-              type="checkbox"
-              checked={cfg.boldId}
-              onChange={e => setStampConfig(s => ({
-                ...s,
-                [type]: { ...s[type], boldId: e.target.checked }
-              }))}
-            />
-            <label className="text-sm">Bold ID</label>
-          </div>
-        </div>
-      </div>
-    );
-  };
+ 
 
   return (
     <div className="min-h-screen bg-gray-50 flex items-center justify-center p-6">
       <div className="bg-white shadow-lg rounded-lg max-w-md w-full p-6 space-y-6">
-        <h2 className="text-2xl font-bold text-center">Download Template</h2>
+        <h2 className="text-2xl font-bold text-center">Your Personal Documents</h2>
 
         <div>
-          <label className="block text-sm font-medium mb-1">
-            Choose:
-          </label>
+          <label className="block text-sm font-medium mb-1">Choose Document</label>
           <select
             value={sel?.id || ''}
-            onChange={e =>
-              setSel(templates.find(t => t.id === e.target.value) || null)
-            }
+            onChange={e => setSel(templates.find(t => t.id === e.target.value) || null)}
             className="w-full border rounded p-2"
           >
-            <option value="">— select a template —</option>
+            <option value="">— Select —</option>
             {options.map(t => (
-              <option key={t.id} value={t.id}>
-                {t.name} ({t.templateType})
-              </option>
+              <option key={t.id} value={t.id}>{t.name}</option>
             ))}
           </select>
         </div>
+
 
         {sel && (
           <div className="flex items-center space-x-4 p-4 bg-gray-100 rounded">
@@ -255,8 +197,6 @@ export default function DownloadsPage() {
             </div>
           </div>
         )}
-
-        
 
         <canvas ref={canvasRef} className="hidden" />
 

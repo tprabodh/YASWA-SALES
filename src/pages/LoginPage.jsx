@@ -210,14 +210,14 @@ export default function LoginPage() {
 
   // Dropdown options
   const positionOptions = [
-    { label: "Education Counseller",              value: "officer",       role: "employee",                       prefix: "EC" },
+    { label: "Educational Counselor(Lecturers)",              value: "officer",       role: "employee",                       prefix: "EC" },
     { label: "Telecaller",                       value: "telecaller",    role: "telecaller",                     prefix: "TC" },
         { label: "Manager-Sales",                       value: "telecaller",    role: "telecaller",                     prefix: "TC" },
     { label: "Team Lead",                    value: "manager",       role: "manager",                        prefix: "TL" },
    /* { label: "Business Head",                    value: "businessHead",  role: "businessHead",                   prefix: "YH" },
         { label: "Sales Head",     value: "salesHead",     role: "salesHead",                      prefix: "SH" }, */
 
-    { label: "Sales Associate",                  value: "associate",     role: "associate",                      prefix: "SA" },
+    { label: "Sales Associate(Freshers)",                  value: "associate",     role: "associate",                      prefix: "SA" },
     { label: "Business Development Consultant",          value: "bdConsultant",  role: "businessDevelopmentConsultant",  prefix: "BC" },
   ];
 
@@ -449,10 +449,35 @@ Stay consistent. Sell smart. Grow fast.</p>
   className="max-w-sm mx-auto mt-20 bg-white p-6 rounded shadow-lg"
   overlayClassName="fixed inset-0 bg-black bg-opacity-50"
 >
-  <h3 className="text-xl font-bold mb-4">Welcome!</h3>
+  <h3 className="text-xl font-bold mb-4">Welcome!  </h3>
   {profile ? (
-    <p className="mb-6">Hello <strong>{profile.name}</strong>, welcome to Yaswa Sales! You're now part of a growing team helping students succeed in <strong>NEET UG & JEE MAINS</strong> with our trusted mock exam packages.</p>
-  ) : (
+  <ul className="list-disc pl-5 text-gray-700 mb-6">
+    <p>
+      <li><strong>1.Download from "DOWNLOAD" Tab</strong></li>
+    <li>•	Offer Letter</li>
+    <li>•	Visiting Card</li>
+    <li>•	Posters, Flyers & Social Media Creatives (with your name & number)</li>
+    </p>
+    
+     <p>
+      <li><strong>2.	Go to "BULLETIN" Tab</strong></li>
+    <li>•	Product & Sales PDFs</li>
+    <li>•	Training YouTube Links</li>
+    </p>
+
+     <p>
+      <li><strong>3.	Portal Training Videos</strong></li>
+    <li>Watch on YouTube to learn how to use the app effectively</li>
+    </p>
+
+     <p>
+      <li><strong>4.	Daily Live Training</strong></li>
+    <li>•	Learn about the company, product, and how to achieve your monthly goals</li>
+    </p>
+
+    <p>You're all set to begin.
+Stay consistent. Sell smart. Grow fast.</p>
+     </ul>  ) : (
     <p className="mb-6">Welcome to Yaswa Sales!</p>
   )}
   <button

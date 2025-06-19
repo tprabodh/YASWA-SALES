@@ -7,8 +7,8 @@ import { db }                from '../firebase';
 
 // Map internal roles to friendly labels
 const roleLabels = {
-  employee: 'Education Counsellor',
-  associate: 'Sales Associate',
+  employee: 'Educational Counselor(Lecturer)',
+  associate: 'Sales Associate(Fresher)',
   manager: 'Team Lead',
   businessHead: 'Senior Manager',
   telecaller: 'Manager-Sales',

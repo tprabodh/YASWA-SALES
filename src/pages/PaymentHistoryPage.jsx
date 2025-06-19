@@ -48,6 +48,7 @@ function getDateRange(type, custom) {
 
 export default function PaymentHistoryPage() {
   const { profile, loading } = useUserProfile();
+    const isEmployee = profile?.role === 'employee';
   const [historyEntries, setHistoryEntries] = useState([]);
   const [dateType, setDateType]            = useState('today');
   const [customRange, setCustomRange]      = useState({ start: null, end: null });
@@ -123,39 +124,83 @@ export default function PaymentHistoryPage() {
     return profile.companyId + '_' + (s===e?s:`${s}_to_${e}`);
   };
 
-  const handleDownloadReports = async (entry) => {
-    const rows = [];
-    for (let rid of entry.paidReportIds) {
-      const docSnap = await getDocs(
-        query(collection(db,'reports'), where('__name__','==',rid))
-      );
-      if (!docSnap.empty) {
-        const r = docSnap.docs[0].data();
-        rows.push({
-          'Student Name': r.studentName || '',
-                    'Student Phone': r.studentPhone || '',
-          Grade:          r.grade || '',
-          Course:         r.course || '',
-          Status:         r.status || '',
-          'Created At':   r.createdAt?.toDate().toLocaleString() || '',
-          'Paid At':      entry.paidAt.toDate().toLocaleString(),
-          'Manager Id':   r.managerId || '',
-          'Incentives':   "₹2000"
-        });
-      }
+  async function handleDownloadReports(entry) {
+  if (!profile) return;
+
+  const isEmployee = profile.role === 'employee';
+  const rows = [];
+
+  for (let rid of entry.paidReportIds) {
+    const docSnap = await getDocs(
+      query(collection(db, 'reports'), where('__name__', '==', rid))
+    );
+    if (docSnap.empty) continue;
+
+    const r = docSnap.docs[0].data();
+    const baseRow = {
+      'Report ID':    rid,
+      'Student Name': r.studentName || '',
+      'Student Phone':r.studentPhone || '',
+      Grade:          r.grade || '',
+      Course:         r.course || '',
+      Status:         r.status || '',
+      'Created At':   r.createdAt?.toDate().toLocaleString() || '',
+      'Paid At':      entry.paidAt.toDate().toLocaleString(),
+    };
+
+    if (isEmployee) {
+      // ₹2000 per report
+      baseRow['My Incentives'] = entry.numberOfReports * 2000;
     }
-    if (!rows.length) {
-      return toast.info('No paid reports found.');
-    }
-    const ws = XLSX.utils.json_to_sheet(rows);
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, 'My Paid Reports');
-    XLSX.writeFile(wb, `${buildFilenameBase(entry.dateRange)}_my_reports.xlsx`);
-  };
+
+    rows.push(baseRow);
+  }
+
+  if (!rows.length) {
+    return toast.info('No paid reports found.');
+  }
+
+  // Build worksheet
+  const ws = XLSX.utils.json_to_sheet(rows);
+
+  // If employee, ensure the incentives column is in the header order:
+  if (isEmployee) {
+    const headers = [
+      'Report ID',
+      'Student Name',
+      'Student Phone',
+      'Grade',
+      'Course',
+      'Status',
+      'Created At',
+      'Paid At',
+      'My Incentives'
+    ];
+    XLSX.utils.sheet_add_aoa(ws, [headers], { origin: 'A1' });
+    // Re-write the data rows below header
+    XLSX.utils.sheet_add_json(ws, rows, { origin: 'A2', skipHeader: true });
+  }
+
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'My Paid Reports');
+
+  const baseName = (() => {
+    const toIso = d => d.toISOString().slice(0, 10);
+    const s = toIso(entry.dateRange.start.toDate());
+    const e = toIso(entry.dateRange.end.toDate());
+    return `${profile.companyId}_${s}${s !== e ? `_to_${e}` : ''}`;
+  })();
+
+  XLSX.writeFile(wb, `${baseName}_my_reports.xlsx`);
+}
+
+
+
+   
 
   return (
     <div className="min-h-screen bg-gray-50 p-6">
-      <ToastContainer
+ <ToastContainer
         position="top-center"
         autoClose={3000}
         hideProgressBar={false}
@@ -176,7 +221,7 @@ export default function PaymentHistoryPage() {
           }
         />
       </div>
-
+      
       <div className="overflow-x-auto bg-white rounded-lg shadow">
         <table className="min-w-full divide-y divide-gray-200">
           <thead className="bg-gray-100">
@@ -185,7 +230,7 @@ export default function PaymentHistoryPage() {
                 'Paid Date/Period',
                 'Paid On',
                 'Total Reports',
-                'My Incentives',
+                ...(isEmployee ? ['My Incentives'] : []),
                 'Actions'
               ].map(h => (
                 <th
@@ -200,7 +245,10 @@ export default function PaymentHistoryPage() {
           <tbody className="bg-white divide-y divide-gray-200">
             {historyEntries.length === 0 ? (
               <tr>
-                <td colSpan={5} className="px-6 py-4 text-center text-gray-500">
+                <td
+                  colSpan={isEmployee ? 5 : 4}
+                  className="px-6 py-4 text-center text-gray-500"
+                >
                   No payment history found.
                 </td>
               </tr>
@@ -226,9 +274,11 @@ export default function PaymentHistoryPage() {
                     <td className="px-6 py-3 text-sm text-gray-800">
                       {entry.numberOfReports}
                     </td>
-                    <td className="px-6 py-3 text-sm text-green-700 font-semibold">
-                      ₹{incentive.toLocaleString()}
-                    </td>
+                    {isEmployee && (
+                      <td className="px-6 py-3 text-sm text-green-700 font-semibold">
+                        ₹{incentive.toLocaleString()}
+                      </td>
+                    )}
                     <td className="px-6 py-3 text-sm">
                       <button
                         onClick={() => handleDownloadReports(entry)}
