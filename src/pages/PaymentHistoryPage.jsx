@@ -200,6 +200,7 @@ export default function PaymentHistoryPage() {
 
   return (
     <div className="min-h-screen bg-gray-50 p-6">
+      <br /><br /><br />
  <ToastContainer
         position="top-center"
         autoClose={3000}
@@ -207,7 +208,7 @@ export default function PaymentHistoryPage() {
         pauseOnHover
       />
 
-      <h2 className="text-2xl font-bold mb-4">
+      <h2 className="text-2xl font-extrabold text-[#8a1ccf] mb-4">
         {profile.name} ({profile.companyId})'s Payment History
       </h2>
 

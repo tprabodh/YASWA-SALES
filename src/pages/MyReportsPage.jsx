@@ -110,7 +110,7 @@ export default function MyReportsPage() {
   return (
     <div className="min-h-screen bg-white p-8 text-black">
       <br /><br />
-      <h2 className="text-4xl font-extrabold text-gray-800 mb-6">
+      <h2 className="text-2xl font-extrabold text-[#8a1ccf] mb-4">
         Hi {profile.name} ({profile.companyId}) — Your Sales Report Status
       </h2>
 

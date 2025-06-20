@@ -300,7 +300,7 @@ export default function EmployeeManagement() {
   return (
     <div className="min-h-screen bg-gray-50 p-6">
       <br /><br />
-      <h2 className="text-2xl font-bold text-gray-800 mb-6">
+      <h2 className="text-2xl font-extrabold text-[#8a1ccf] mb-4">
         Employee Management
       </h2>
 

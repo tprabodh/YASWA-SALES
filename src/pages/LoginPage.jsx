@@ -408,28 +408,28 @@ function handleSubmit(e) {
   overlayClassName="fixed inset-0 bg-black bg-opacity-50"
 >
   <h3 className="text-xl font-bold mb-4">Quick Tour</h3>
-  <ul className="list-disc pl-5 text-gray-700 mb-6">
+ <ul className="list-disc pl-5 text-gray-700 mb-6">
     <p>
-      <li><strong>1.Download from "DOWNLOAD" Tab</strong></li>
-    <li>•	Offer Letter</li>
-    <li>•	Visiting Card</li>
-    <li>•	Posters, Flyers & Social Media Creatives (with your name & number)</li>
+      <strong>1.Download from "Personal Documents" Tab</strong>
+    <li>Offer Letter</li>
+    <li>Visiting Card</li>
+    <li>Posters, Flyers & Social Media Creatives (with your name & number)</li>
     </p>
     
      <p>
-      <li><strong>2.	Go to "BULLETIN" Tab</strong></li>
-    <li>•	Product & Sales PDFs</li>
-    <li>•	Training YouTube Links</li>
+      <strong>2.	Go to "Training Module" Tab</strong>
+    <li>Product & Sales PDFs</li>
+    <li>Training YouTube Links</li>
     </p>
 
      <p>
-      <li><strong>3.	Portal Training Videos</strong></li>
+      <strong>3.	Portal Training Videos</strong>
     <li>Watch on YouTube to learn how to use the app effectively</li>
     </p>
 
      <p>
-      <li><strong>4.	Daily Live Training</strong></li>
-    <li>•	Learn about the company, product, and how to achieve your monthly goals</li>
+      <strong>4.	Daily Live Training</strong>
+    <li>Learn about the company, product, and how to achieve your monthly goals</li>
     </p>
 
     <p>You're all set to begin.
@@ -464,26 +464,26 @@ Stay consistent. Sell smart. Grow fast.</p>
   {profile ? (
   <ul className="list-disc pl-5 text-gray-700 mb-6">
     <p>
-      <li><strong>1.Download from "DOWNLOAD" Tab</strong></li>
-    <li>•	Offer Letter</li>
-    <li>•	Visiting Card</li>
-    <li>•	Posters, Flyers & Social Media Creatives (with your name & number)</li>
+      <strong>1.Download from "Personal Documents" Tab</strong>
+    <li>Offer Letter</li>
+    <li>Visiting Card</li>
+    <li>Posters, Flyers & Social Media Creatives (with your name & number)</li>
     </p>
     
      <p>
-      <li><strong>2.	Go to "BULLETIN" Tab</strong></li>
-    <li>•	Product & Sales PDFs</li>
-    <li>•	Training YouTube Links</li>
+      <strong>2.	Go to "Training Module" Tab</strong>
+    <li>Product & Sales PDFs</li>
+    <li>Training YouTube Links</li>
     </p>
 
      <p>
-      <li><strong>3.	Portal Training Videos</strong></li>
+      <strong>3.	Portal Training Videos</strong>
     <li>Watch on YouTube to learn how to use the app effectively</li>
     </p>
 
      <p>
-      <li><strong>4.	Daily Live Training</strong></li>
-    <li>•	Learn about the company, product, and how to achieve your monthly goals</li>
+      <strong>4.	Daily Live Training</strong>
+    <li>Learn about the company, product, and how to achieve your monthly goals</li>
     </p>
 
     <p>You're all set to begin.

@@ -113,7 +113,7 @@ export default function BDCReportFormPage() {
   return (
     <div className="min-h-screen bg-gray-100 flex items-center justify-center px-4 py-10">
       <div className="w-full max-w-md bg-white rounded-xl shadow-lg p-6 sm:p-8">
-        <h1 className="text-xl sm:text-2xl font-semibold text-center text-[#8a1ccf] mb-6">
+        <h1 className="text-2xl sm:text-2xl font-extrabold text-center text-[#8a1ccf] mb-6">
           {`New BDC Sales Report`}
         </h1>
 

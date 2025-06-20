@@ -124,7 +124,7 @@ export default function EmployeeDailyReportsPage({ hideApprove = false }) {
         &larr; Back
       </button>
 
-      <h2 className="text-xl font-bold mb-4">
+      <h2 className="text-2xl font-extrabold text-[#8a1ccf] mb-4">
         Reports for {employeeName}
       </h2>
 

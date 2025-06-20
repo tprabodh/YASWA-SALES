@@ -141,11 +141,11 @@ export default function DownloadsPage() {
     }
 
     // DOCX templates
-    try {
-      const res = await fetch(sel.url);
-      const buf = await res.arrayBuffer();
-      const zip = new PizZip(buf);
-      const doc = new Docxtemplater(zip, { paragraphLoop: true, linebreaks: true });
+   try {
+  const res = await fetch(sel.url);
+  const buf = await res.arrayBuffer();
+  const zip = new PizZip(buf);
+  const doc = new Docxtemplater(zip, { paragraphLoop: true, linebreaks: true });
 
       // today as dd-mm-yyyy
       const d   = new Date();
@@ -160,21 +160,36 @@ export default function DownloadsPage() {
         employeeRole: ROLE_LABELS[profile.role] || profile.role,
         date:         today,
       });
-      doc.render();
+       doc.render();
 
-      const out = doc.getZip().generate({ type:'blob' });
-      saveAs(out, `${sel.templateType}_${profile.companyId}.docx`);
+       const blob = doc
+    .getZip()
+    .generate({
+      type: 'blob',
+      mimeType:
+        'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    });
 
-    } catch(err) {
-      alert('Error generating document: ' + err.message);
+    const file = new File(
+    [blob],
+    `${sel.templateType}_${profile.companyId}.docx`,
+    {
+      type:
+        'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
     }
+  );
+
+     saveAs(file);
+} catch (err) {
+  alert('Error generating document: ' + err.message);
+}
   };
 
   return (
     <div className="min-h-screen bg-gray-50 flex items-center justify-center p-6">
       <div className="bg-white shadow-lg rounded-lg max-w-md w-full p-6 space-y-6">
         
-        <h2 className="text-2xl font-bold text-center">Your Personal Documents</h2>
+        <h2 className="text-2xl font-extrabold text-[#8a1ccf] mb-4">Your Personal Documents</h2>
 
         <div>
           <select

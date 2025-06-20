@@ -115,6 +115,7 @@ export default function ManagerSummaryPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-white to-purple-50 p-6">
+      <br /> <br />
       <button
         onClick={() => navigate(-1)}
         className="text-purple-600 hover:underline mb-4"
@@ -122,7 +123,7 @@ export default function ManagerSummaryPage() {
         &larr; Back
       </button>
 
-      <h2 className="text-3xl font-extrabold text-purple-800 mb-1">
+      <h2 className="text-2xl font-extrabold text-[#8a1ccf] mb-1">
         Team under {manager.name} ({manager.companyId})
       </h2>
       <p className="text-gray-600 mb-4">

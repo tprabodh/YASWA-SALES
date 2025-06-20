@@ -127,7 +127,7 @@ export default function ProfilePage() {
       <div className="bg-white rounded-2xl shadow-xl max-w-lg w-full overflow-hidden">
         <div className="p-8">
           <br /><br />
-          <h2 className="text-3xl font-extrabold text-[#8a1ccf] mb-6 text-center">
+          <h2 className="text-2xl font-extrabold text-[#8a1ccf] mb-6 text-center">
             My Profile
           </h2>
 

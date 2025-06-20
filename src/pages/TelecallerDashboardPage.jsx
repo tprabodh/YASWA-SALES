@@ -182,9 +182,9 @@ export default function TelecallerDashboardPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-50 to-indigo-50 p-6">
+    <div className="min-h-screen p-6">
       <br /><br />
-     <h2 className="text-2xl font-bold mb-4">
+     <h2 className="text-2xl font-bold mb-4 text-[#8a1ccf]">
   {profile.name} ({profile.companyId})'s Team Leads
 </h2>
 

@@ -150,7 +150,7 @@ export default function ManagerPaymentHistoryPage() {
   return (
     <div className="p-6">
         <br /><br />
-      <h2 className="text-2xl font-bold mb-4">My Team's Payment History</h2>
+      <h2 className="text-2xl font-extrabold text-[#8a1ccf] mb-4">My Team's Payment History</h2>
       <div className="overflow-x-auto bg-white rounded-lg shadow">
         <table className="min-w-full divide-y divide-gray-200">
           <thead className="bg-gray-100">

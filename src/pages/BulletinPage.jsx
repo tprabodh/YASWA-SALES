@@ -71,8 +71,8 @@ export default function BulletinPage() {
 
   return (
     <div className="p-6 max-w-3xl mx-auto space-y-6">
-      <br /><br />
-      <h2 className="text-3xl font-bold text-indigo-600">TRAINING MODULE</h2>
+      <br /><br /><br />
+      <h2 className="text-2xl font-extrabold text-[#8a1ccf] mb-4">TRAINING MODULE</h2>
 
       {bulletins.length === 0 ? (
         <p className="text-gray-500">No TRAINING MODULES</p>

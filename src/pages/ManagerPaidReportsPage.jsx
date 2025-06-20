@@ -129,7 +129,7 @@ export default function ManagerPaidReportsPage() {
   return (
     <div className="p-6">
       <br /><br />
-      <h2 className="text-2xl font-bold mb-4">
+      <h2 className="text-2xl font-extrabold text-[#8a1ccf] mb-4">
         Paid Reports for {profile.name}
       </h2>
 

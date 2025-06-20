@@ -443,6 +443,7 @@ export default function EmployeeSummaryDetailPage({ hideActions = false }) {
       />
 
       <div className="min-h-screen bg-gray-50 p-6">
+        <br /><br />
         <button
           onClick={() => navigate('/admin/employee-summary')}
           className="mb-4 text-indigo-600 hover:underline"
@@ -450,7 +451,7 @@ export default function EmployeeSummaryDetailPage({ hideActions = false }) {
           &larr; Back
         </button>
 
-        <h2 className="text-2xl font-bold text-gray-800 mb-6">
+        <h2 className="text-2xl font-extrabold text-[#8a1ccf] mb-4">
           Team under {mgr.name} ({mgr.companyId})
         </h2>
 

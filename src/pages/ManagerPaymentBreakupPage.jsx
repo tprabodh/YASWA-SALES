@@ -127,7 +127,7 @@ export default function ManagerPaymentBreakupPage() {
   return (
     <div className="p-6">
       <br /><br />
-      <h2 className="text-2xl font-bold mb-4">
+      <h2 className="text-2xl font-extrabold text-[#8a1ccf] mb-4">
         Breakdown for period {startDt} – {endDt}
       </h2>
 

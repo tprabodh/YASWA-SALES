@@ -194,7 +194,7 @@ export default function MyBusinessHeadsPage() {
   return (
     <div className="p-6 space-y-6">
       <br /><br />
-      <h2 className="text-2xl font-bold mb-4">
+      <h2 className="text-2xl font-extrabold text-[#8a1ccf] mb-4">
   {profile.name} ({profile.companyId})'s Dashboard
 </h2>
      

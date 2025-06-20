@@ -156,7 +156,7 @@ export default function ForecastInputPage() {
     <div className="p-6 max-w-md mx-auto">
       <br /><br />
       <ToastContainer />
-      <h2 className="text-2xl font-bold mb-4">Enter Forecast</h2>
+      <h2 className="text-2xl font-extrabold text-[#8a1ccf] mb-4">Enter Forecast</h2>
       <form onSubmit={handleSubmit} className="space-y-4">
         {/* Manager */}
         <div>

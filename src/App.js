@@ -27,7 +27,6 @@ import ForecastPage from './pages/ForecastPage';
 import ForecastInputPage from './pages/ForecastInputPage';
 import ProfilePage from './pages/ProfilePage';
 import AdminPaymentHistoryPage from './pages/AdminPaymentHistoryPage';
-import UploadDesignPage from './pages/UploadDesignPage';
 import DownloadsPage from './pages/DownloadsPage';
 import BulletinInputPage from './pages/BulletinInputPage';
 import BulletinPage from './pages/BulletinPage';
@@ -67,7 +66,6 @@ function App() {
             <Route path="/forecast" element={<ForecastPage />} />
                                    <Route path="/telecaller/manager-summary/:uid" element={<ManagerSummaryPage />}/>
             <Route path="/forecast-input" element={<ForecastInputPage />} />
-            <Route path="/admin/upload-designs" element={<UploadDesignPage />} />
              <Route path="/downloads" element={<DownloadsPage />} />
                <Route path="/admin/bulletin-input" element={<BulletinInputPage />} />
                <Route path="/bdc-report" element={<BDCReportFormPage />} />
