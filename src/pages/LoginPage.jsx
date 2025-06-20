@@ -407,7 +407,7 @@ function handleSubmit(e) {
   className="max-w-lg mx-auto mt-20 bg-white p-6 rounded shadow-lg"
   overlayClassName="fixed inset-0 bg-black bg-opacity-50"
 >
-  <h3 className="text-xl font-bold mb-4">Quick Tour</h3>
+  <h3 className="text-xl font-bold mb-4">Fast Tour</h3>
  <ul className="list-disc pl-5 text-gray-700 mb-6">
     <p>
       <strong>1.Download from "Personal Documents" Tab</strong>
