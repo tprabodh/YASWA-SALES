@@ -351,16 +351,17 @@ function handleSubmit(e) {
     }
   };
 
-  return (
-  <div className="flex flex-col items-center py-8 px-4 bg-[#8a1ccf] min-h-screen">
-    
-    
-  {/* ← your new heading */}
-  <h1 className="text-5xl font-extrabold text-white mb-6">Welcome to Yaswa Sales</h1>
+ return (
+    // Main container: Flex column to stack heading and form card vertically.
+    // items-center centers them horizontally. justify-center centers vertically.
+    <div className="flex flex-col items-center justify-center min-h-screen bg-gradient-to-br from-[#8a1ccf] to-[#8a1ccf]/90 py-8 px-4">
 
-   <div className="min-h-screen bg-gradient-to-br from-[#8a1ccf]/80 to-[#8a1ccf]/60 flex items-center justify-center px-4">
-            {/* Loading overlay during actual registration/login */}
-            
+      {/* Heading: Centered with margin-bottom for spacing. */}
+      <h1 className="text-5xl font-extrabold text-white text-center mb-6">
+        Welcome to Yaswa Sales
+      </h1>
+
+      {/* Loading overlay during actual registration/login */}
       {loadingReg && (
         <div className="absolute inset-0 bg-white bg-opacity-90 flex items-center justify-center z-50">
           <div className="text-center">
@@ -371,7 +372,7 @@ function handleSubmit(e) {
           </div>
         </div>
       )}
-      <Modal
+         <Modal
   isOpen={showDeclaration}
   onRequestClose={() => setShowDeclaration(false)}
   className="max-w-md mx-auto mt-20 bg-white p-6 rounded shadow-lg"
@@ -509,352 +510,331 @@ Stay consistent. Sell smart. Grow fast.</p>
     Let’s Go
   </button>
 </Modal>
- 
 
+      {/* White container for the form and illustration. Responsive width. */}
       <div className="bg-white rounded-2xl shadow-xl max-w-4xl w-full flex overflow-hidden">
-  {/* Left half: heading + form */}
-  <div className="w-full md:w-1/2 max-h-[90vh] overflow-y-auto p-8">
-        <br />
-         
-        
-         <ToastContainer />
-        <h1 className="text-3xl font-bold text-center text-[#8a1ccf]">
-          {isNew ? 'Register' : 'Sign In'}
-        </h1>
+        {/* Left half: heading + form */}
+        <div className="w-full md:w-1/2 max-h-[90vh] overflow-y-auto p-8">
+          <ToastContainer />
+          <h1 className="text-3xl font-bold text-center text-[#8a1ccf]">
+            {isNew ? 'Register' : 'Sign In'}
+          </h1>
 
-        {error && (
-          <div className="bg-red-100 text-red-700 p-2 rounded text-sm">
-            {error}
-          </div>
-        )}
-
-        <form onSubmit={handleSubmit} noValidate className="space-y-4">
-          {isNew && (
-            <>
-              {/* Position */}
-              <div>
-                <label className="block text-gray-700">Position</label>
-                <select
-                  value={position}
-                  onChange={e => {
-                    setPosition(e.target.value);
-                    setErrors(prev => ({ ...prev, position: false }));
-                  }}
-                  className={`mt-1 w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-[#8a1ccf]
-                    ${errors.position ? 'border-red-500' : 'border-gray-300'}`}
-                >
-                  <option value="">Select position</option>
-                  {positionOptions.map(o => (
-                    <option key={o.value} value={o.value}>
-                      {o.label}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              {/* Name */}
-              <div>
-                <label className="block text-gray-700">Name</label>
-                <input
-                  type="text"
-                  value={name}
-                  onChange={e => {
-                    setName(e.target.value);
-                    setErrors(prev => ({ ...prev, name: false }));
-                  }}
-                  className={`mt-1 w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-[#8a1ccf]
-                    ${errors.name ? 'border-red-500' : 'border-gray-300'}`}
-                />
-              </div>
-
-              {/* Mobile Number */}
-              <div>
-                <label className="block text-gray-700">Mobile Number</label>
-                <input
-                  type="tel"
-                  value={mobileNumber}
-                  onChange={e => {
-                    setMobileNumber(e.target.value);
-                    setErrors(prev => ({ ...prev, mobileNumber: false }));
-                  }}
-                  onBlur={handleMobileBlur}
-                  className={`mt-1 w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-[#8a1ccf]
-                    ${errors.mobileNumber ? 'border-red-500' : 'border-gray-300'}`}
-                />
-              </div>
-
-              {/* WhatsApp Number */}
-              <div>
-                <label className="block text-gray-700">WhatsApp Number</label>
-                <input
-                  type="tel"
-                  value={whatsappNumber}
-                  onChange={e => {
-                    setWhatsappNumber(e.target.value);
-                    setErrors(prev => ({ ...prev, whatsappNumber: false }));
-                  }}
-                  className={`mt-1 w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-[#8a1ccf]
-                    ${errors.whatsappNumber ? 'border-red-500' : 'border-gray-300'}`}
-                />
-              </div>
-
-              {/* Aadhar Number (Optional) */}
-              <div>
-                <label className="block text-gray-700">Aadhar Number (Optional)</label>
-                <input
-                  type="text"
-                  value={aadharNumber}
-                  onChange={e => setAadharNumber(e.target.value)}
-                  className={`mt-1 w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-[#8a1ccf]
-                    ${errors.name ? 'border-red-500' : 'border-gray-300'}`}
-                />
-              </div>
-
-              {/* Bank Account Number (MANDATORY) */}
-              <div>
-                <label className="block text-gray-700">Bank Account Number</label>
-                <input
-                  type="text"
-                  value={bankAccountNumber}
-                  onChange={e => {
-                    setBankAccountNumber(e.target.value);
-                    setErrors(prev => ({ ...prev, bankAccountNumber: false }));
-                  }}
-                  className={`mt-1 w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-[#8a1ccf]
-                    ${errors.bankAccountNumber ? 'border-red-500' : 'border-gray-300'}`}
-                />
-              </div>
-
-              {/* IFSC Code (MANDATORY) */}
-              <div>
-                <label className="block text-gray-700">IFSC Code</label>
-                <input
-                  type="text"
-                  value={ifscCode}
-                  onChange={e => {
-                    setIfscCode(e.target.value);
-                    setErrors(prev => ({ ...prev, ifscCode: false }));
-                  }}
-                  className={`mt-1 w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-[#8a1ccf]
-                    ${errors.ifscCode ? 'border-red-500' : 'border-gray-300'}`}
-                />
-              </div>
-
-              {/* Residing State */}
-              <div>
-                <label className="block text-gray-700">Residing State</label>
-                <select
-                  value={residingState}
-                  onChange={e => {
-                    setResidingState(e.target.value);
-                    setErrors(prev => ({ ...prev, residingState: false }));
-                  }}
-                  className={`mt-1 w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-[#8a1ccf]
-                    ${errors.residingState ? 'border-red-500' : 'border-gray-300'}`}
-                >
-                  <option value="">Select</option>
-                  {statesOfIndia.map(s => (
-                    <option key={s} value={s}>
-                      {s}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              {/* If Admissions Officer, show extra fields */}
-              {position === 'officer' && (
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  {/* Designation */}
-                  <div>
-                    <label className="block text-gray-700">Designation</label>
-                    <select
-                      value={designation}
-                      onChange={e => {
-                        setDesignation(e.target.value);
-                        setErrors(prev => ({ ...prev, designation: false }));
-                      }}
-                      className={`mt-1 w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-[#8a1ccf]
-                        ${errors.designation ? 'border-red-500' : 'border-gray-300'}`}
-                    >
-                      <option value="">Select</option>
-                      <option>Lecturer/Professor/Teaching Staff</option>
-                      <option>Administrative/Admissions Staff</option>
-                      <option>Non Educational Industry</option>
-                    </select>
-                  </div>
-                  {/* Associated With */}
-                  <div>
-                    <label className="block text-gray-700">Associated With</label>
-                    <select
-                      value={associatedWith}
-                      onChange={e => {
-                        setAssociatedWith(e.target.value);
-                        setErrors(prev => ({ ...prev, associatedWith: false }));
-                      }}
-                      className={`mt-1 w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-[#8a1ccf]
-                        ${errors.associatedWith ? 'border-red-500' : 'border-gray-300'}`}
-                    >
-                      <option value="">Select</option>
-                      <option>PU</option>
-                      <option>School</option>
-                      <option>Non Educational</option>
-                    </select>
-                  </div>
-                  {/* Teaching Subject */}
-                  <div>
-                    <label className="block text-gray-700">Teaching Subject</label>
-                    <select
-                      value={teachingSubject}
-                      onChange={e => {
-                        setTeachingSubject(e.target.value);
-                        setErrors(prev => ({ ...prev, teachingSubject: false }));
-                      }}
-                      className={`mt-1 w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-[#8a1ccf]
-                        ${errors.teachingSubject ? 'border-red-500' : 'border-gray-300'}`}
-                    >
-                      <option value="">Select</option>
-                      <option>Physics</option>
-                      <option>Maths</option>
-                      <option>Biology</option>
-                      <option>Chemistry</option>
-                      <option>Others</option>
-                    </select>
-                  </div>
-                </div>
-              )}
-            </>
+          {error && (
+            <div className="bg-red-100 text-red-700 p-2 my-4 rounded text-sm">
+              {error}
+            </div>
           )}
 
-          {/* Email */}
-        <div>
-          <label className="block text-gray-700">Email</label>
-          <input
-            type="email"
-            value={email}
-            onChange={e => {
-              setEmail(e.target.value);
-              setErrors(prev => ({ ...prev, email: false }));
-            }}
-            className={`mt-1 w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-[#8a1ccf]
-              ${errors.email ? 'border-red-500' : 'border-gray-300'}`}
-            required
-          />
-        </div>
+          <form onSubmit={handleSubmit} noValidate className="space-y-4 mt-4">
+            {isNew && (
+              <>
+                {/* Position */}
+                <div>
+                  <label className="block text-gray-700">Position</label>
+                  <select
+                    value={position}
+                    onChange={e => {
+                      setPosition(e.target.value);
+                      setErrors(prev => ({ ...prev, position: false }));
+                    }}
+                    className={`mt-1 w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-[#8a1ccf] ${errors.position ? 'border-red-500' : 'border-gray-300'}`}
+                  >
+                    <option value="">Select position</option>
+                    {positionOptions.map(o => (
+                      <option key={o.value} value={o.value}>
+                        {o.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
 
-{/* Password */}
-<div className="mt-4">
-  <label htmlFor="password" className="block text-gray-700 mb-1">
-    Password
-  </label>
+                {/* Name */}
+                <div>
+                  <label className="block text-gray-700">Name</label>
+                  <input
+                    type="text"
+                    value={name}
+                    onChange={e => {
+                      setName(e.target.value);
+                      setErrors(prev => ({ ...prev, name: false }));
+                    }}
+                    className={`mt-1 w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-[#8a1ccf] ${errors.name ? 'border-red-500' : 'border-gray-300'}`}
+                  />
+                </div>
 
-  {/* relative wrapper only around input + icon */}
-  <div className="relative w-full">
-    <input
-      id="password"
-      type={showPwd ? 'text' : 'password'}
-      value={password}
-      onChange={e => {
-        setPassword(e.target.value);
-        setErrors(prev => ({ ...prev, password: false }));
-      }}
-             className={`w-full px-4 py-2 pr-12 border rounded-lg focus:outline-none focus:ring-2 focus:ring-[#8a1ccf] ${errors.password ? 'border-red-500' : 'border-gray-300'}`}
+                {/* Mobile Number */}
+                <div>
+                  <label className="block text-gray-700">Mobile Number</label>
+                  <input
+                    type="tel"
+                    value={mobileNumber}
+                    onChange={e => {
+                      setMobileNumber(e.target.value);
+                      setErrors(prev => ({ ...prev, mobileNumber: false }));
+                    }}
+                    onBlur={handleMobileBlur}
+                    className={`mt-1 w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-[#8a1ccf] ${errors.mobileNumber ? 'border-red-500' : 'border-gray-300'}`}
+                  />
+                </div>
 
-      required
-    />
+                {/* WhatsApp Number */}
+                <div>
+                  <label className="block text-gray-700">WhatsApp Number</label>
+                  <input
+                    type="tel"
+                    value={whatsappNumber}
+                    onChange={e => {
+                      setWhatsappNumber(e.target.value);
+                      setErrors(prev => ({ ...prev, whatsappNumber: false }));
+                    }}
+                    className={`mt-1 w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-[#8a1ccf] ${errors.whatsappNumber ? 'border-red-500' : 'border-gray-300'}`}
+                  />
+                </div>
 
-    {/* icon container */}
-    <div className="absolute inset-y-0 right-0 flex items-center pr-3">
-      <button
-        type="button"
-        onClick={() => setShowPwd(p => !p)}
-        className="focus:outline-none"
-        aria-label={showPwd ? 'Hide password' : 'Show password'}
-      >
-        {showPwd
-          ? <VisibilityOff className="w-5 h-5 text-red-500" />
-          : <Visibility className="w-5 h-5 text-green-500" />
-        }
-      </button>
-    </div>
-  </div>
-</div>
+                {/* Aadhar Number (Optional) */}
+                <div>
+                  <label className="block text-gray-700">Aadhar Number (Optional)</label>
+                  <input
+                    type="text"
+                    value={aadharNumber}
+                    onChange={e => setAadharNumber(e.target.value)}
+                    className={`mt-1 w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-[#8a1ccf] border-gray-300`}
+                  />
+                </div>
 
-          <p className="text-right text-sm">
-            {!isNew && (
-              <Link to="/forgot-password" className="text-[#8a1ccf] hover:underline">
-                Forgot Password?
-              </Link>
+                {/* Bank Account Number (MANDATORY) */}
+                <div>
+                  <label className="block text-gray-700">Bank Account Number</label>
+                  <input
+                    type="text"
+                    value={bankAccountNumber}
+                    onChange={e => {
+                      setBankAccountNumber(e.target.value);
+                      setErrors(prev => ({ ...prev, bankAccountNumber: false }));
+                    }}
+                    className={`mt-1 w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-[#8a1ccf] ${errors.bankAccountNumber ? 'border-red-500' : 'border-gray-300'}`}
+                  />
+                </div>
+
+                {/* IFSC Code (MANDATORY) */}
+                <div>
+                  <label className="block text-gray-700">IFSC Code</label>
+                  <input
+                    type="text"
+                    value={ifscCode}
+                    onChange={e => {
+                      setIfscCode(e.target.value);
+                      setErrors(prev => ({ ...prev, ifscCode: false }));
+                    }}
+                    className={`mt-1 w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-[#8a1ccf] ${errors.ifscCode ? 'border-red-500' : 'border-gray-300'}`}
+                  />
+                </div>
+
+                {/* Residing State */}
+                <div>
+                  <label className="block text-gray-700">Residing State</label>
+                  <select
+                    value={residingState}
+                    onChange={e => {
+                      setResidingState(e.target.value);
+                      setErrors(prev => ({ ...prev, residingState: false }));
+                    }}
+                    className={`mt-1 w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-[#8a1ccf] ${errors.residingState ? 'border-red-500' : 'border-gray-300'}`}
+                  >
+                    <option value="">Select</option>
+                    {statesOfIndia.map(s => (
+                      <option key={s} value={s}>
+                        {s}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* If Admissions Officer, show extra fields */}
+                {position === 'officer' && (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    {/* Designation */}
+                    <div>
+                      <label className="block text-gray-700">Designation</label>
+                      <select
+                        value={designation}
+                        onChange={e => {
+                          setDesignation(e.target.value);
+                          setErrors(prev => ({ ...prev, designation: false }));
+                        }}
+                        className={`mt-1 w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-[#8a1ccf] ${errors.designation ? 'border-red-500' : 'border-gray-300'}`}
+                      >
+                        <option value="">Select</option>
+                        <option>Lecturer/Professor/Teaching Staff</option>
+                        <option>Administrative/Admissions Staff</option>
+                        <option>Non Educational Industry</option>
+                      </select>
+                    </div>
+                    {/* Associated With */}
+                    <div>
+                      <label className="block text-gray-700">Associated With</label>
+                      <select
+                        value={associatedWith}
+                        onChange={e => {
+                          setAssociatedWith(e.target.value);
+                          setErrors(prev => ({ ...prev, associatedWith: false }));
+                        }}
+                        className={`mt-1 w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-[#8a1ccf] ${errors.associatedWith ? 'border-red-500' : 'border-gray-300'}`}
+                      >
+                        <option value="">Select</option>
+                        <option>PU</option>
+                        <option>School</option>
+                        <option>Non Educational</option>
+                      </select>
+                    </div>
+                    {/* Teaching Subject */}
+                    <div>
+                      <label className="block text-gray-700">Teaching Subject</label>
+                      <select
+                        value={teachingSubject}
+                        onChange={e => {
+                          setTeachingSubject(e.target.value);
+                          setErrors(prev => ({ ...prev, teachingSubject: false }));
+                        }}
+                        className={`mt-1 w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-[#8a1ccf] ${errors.teachingSubject ? 'border-red-500' : 'border-gray-300'}`}
+                      >
+                        <option value="">Select</option>
+                        <option>Physics</option>
+                        <option>Maths</option>
+                        <option>Biology</option>
+                        <option>Chemistry</option>
+                        <option>Others</option>
+                      </select>
+                    </div>
+                  </div>
+                )}
+              </>
             )}
+
+            {/* Email */}
+            <div>
+              <label className="block text-gray-700">Email</label>
+              <input
+                type="email"
+                value={email}
+                onChange={e => {
+                  setEmail(e.target.value);
+                  setErrors(prev => ({ ...prev, email: false }));
+                }}
+                className={`mt-1 w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-[#8a1ccf] ${errors.email ? 'border-red-500' : 'border-gray-300'}`}
+                required
+              />
+            </div>
+
+            {/* Password */}
+            <div>
+              <label htmlFor="password" className="block text-gray-700 mb-1">
+                Password
+              </label>
+              <div className="relative w-full">
+                <input
+                  id="password"
+                  type={showPwd ? 'text' : 'password'}
+                  value={password}
+                  onChange={e => {
+                    setPassword(e.target.value);
+                    setErrors(prev => ({ ...prev, password: false }));
+                  }}
+                  className={`w-full px-4 py-2 pr-12 border rounded-lg focus:outline-none focus:ring-2 focus:ring-[#8a1ccf] ${errors.password ? 'border-red-500' : 'border-gray-300'}`}
+                  required
+                />
+                <div className="absolute inset-y-0 right-0 flex items-center pr-3">
+                  <button
+                    type="button"
+                    onClick={() => setShowPwd(p => !p)}
+                    className="focus:outline-none"
+                    aria-label={showPwd ? 'Hide password' : 'Show password'}
+                  >
+                    {showPwd
+                      ? <VisibilityOff className="w-5 h-5 text-gray-500" />
+                      : <Visibility className="w-5 h-5 text-gray-500" />
+                    }
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <p className="text-right text-sm -mt-2">
+              {!isNew && (
+                <Link to="/forgot-password" className="text-[#8a1ccf] hover:underline">
+                  Forgot Password?
+                </Link>
+              )}
+            </p>
+
+            {/* Confirm Password (only for register) */}
+            {isNew && (
+              <div>
+                <label htmlFor="confirm-password" className="block text-gray-700 mb-1">
+                  Confirm Password
+                </label>
+                <div className="relative w-full">
+                  <input
+                    id="confirm-password"
+                    type={showConfirmPwd ? 'text' : 'password'}
+                    value={confirm}
+                    onChange={e => {
+                      setConfirm(e.target.value);
+                      setErrors(prev => ({ ...prev, confirm: false }));
+                    }}
+                    className={`w-full px-4 py-2 pr-12 border rounded-lg focus:outline-none focus:ring-2 focus:ring-[#8a1ccf] ${errors.confirm ? 'border-red-500' : 'border-gray-300'}`}
+                    required
+                  />
+                  <div className="absolute inset-y-0 right-0 flex items-center pr-3">
+                    <button
+                      type="button"
+                      onClick={() => setShowConfirmPwd(p => !p)}
+                      className="focus:outline-none"
+                      aria-label={showConfirmPwd ? 'Hide password' : 'Show password'}
+                    >
+                      {showConfirmPwd
+                        ? <VisibilityOff className="w-5 h-5 text-gray-500" />
+                        : <Visibility className="w-5 h-5 text-gray-500" />
+                      }
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+            
+            <button
+              type="submit"
+              className="w-full mt-4 bg-[#8a1ccf] text-white py-3 rounded-lg shadow-lg hover:bg-[#7a1bbf] transition-colors duration-300"
+            >
+              {isNew ? 'Register' : 'Login'}
+            </button>
+          </form>
+
+          <p className="mt-6 text-center text-sm">
+            {isNew ? 'Already have an account? ' : 'New user? '}
+            <button
+              onClick={() => {
+                resetForm();
+                setIsNew(!isNew);
+              }}
+              className="text-[#8a1ccf] text-xl font-bold hover:underline"
+            >
+              {isNew ? 'Sign In' : 'Register'}
+            </button>
           </p>
-
-          {/* Confirm Password (only for register) */}
-       {isNew && (
-  <div className="mt-4">
-    <label htmlFor="confirm-password" className="block text-gray-700 mb-1">
-      Confirm Password
-    </label>
-    <div className="relative w-full">
-      <input
-        id="confirm-password"
-        type={showConfirmPwd ? 'text' : 'password'}
-        value={confirm}
-        onChange={e => {
-          setConfirm(e.target.value);
-          setErrors(prev => ({ ...prev, confirm: false }));
-        }}
-        className={`w-full px-4 py-2 pr-12 border rounded-lg focus:outline-none focus:ring-2 focus:ring-[#8a1ccf] ${errors.confirm ? 'border-red-500' : 'border-gray-300'}`}
-        required
-      />
-      <div className="absolute inset-y-0 right-0 flex items-center pr-3">
-        <button
-          type="button"
-          onClick={() => setShowConfirmPwd(p => !p)}
-          className="focus:outline-none"
-          aria-label={showConfirmPwd ? 'Hide password' : 'Show password'}
-        >
-          {showConfirmPwd
-            ? <VisibilityOff className="w-5 h-5 text-red-500" />
-            : <Visibility className="w-5 h-5 text-green-500" />
-          }
-        </button>
-      </div>
-    </div>
-  </div>
-)}
-          <button
-            type="submit"
-            className="w-full mt-4 bg-[#8a1ccf] text-white py-3 rounded-lg shadow hover:bg-[#7a1bbf] transition"
-          >
-            {isNew ? 'Register' : 'Login'}
-          </button>
-        </form>
-
-        <p className="mt-4 text-center text-sm">
-          {isNew ? 'Already have an account? ' : 'New user? '}
-          <button
-            onClick={() => {
-              resetForm();
-              setIsNew(!isNew);
-            }}
-            className="text-[#8a1ccf] text-xl font-bold hover:underline"
-          >
-            {isNew ? 'Sign In' : 'Register'}
-          </button>
-        </p>
-</div>
-        {/* ToastContainer so that toast.success(...) can display */}
-      <div className="hidden md:block md:w-1/2 bg-gray-100 flex items-center justify-center">
-          {/* swap illustration based on mode */}
+        </div>
+        
+        {/* Right half: Illustration */}
+        <div className="hidden md:flex md:w-1/2 bg-gray-100 items-center justify-center">
           <img
-            src={isNew ?  "https://firebasestorage.googleapis.com/v0/b/yaswa-smd.firebasestorage.app/o/illustrations'%2Fregister2.gif?alt=media&token=849e1ecc-274d-4a33-81a1-4f566747f1c0" : "https://firebasestorage.googleapis.com/v0/b/yaswa-smd.firebasestorage.app/o/illustrations'%2Fregister3.gif?alt=media&token=379cc32b-2a0a-4639-b164-4d8b3293deb7"}
+            src={isNew ? "https://firebasestorage.googleapis.com/v0/b/yaswa-smd.firebasestorage.app/o/illustrations'%2Fregister2.gif?alt=media&token=849e1ecc-274d-4a33-81a1-4f566747f1c0" : "https://firebasestorage.googleapis.com/v0/b/yaswa-smd.firebasestorage.app/o/illustrations'%2Fregister3.gif?alt=media&token=379cc32b-2a0a-4639-b164-4d8b3293deb7"}
             alt={isNew ? 'Register Illustration' : 'Login Illustration'}
-            className="max-w-full max-h-full"
+            className="w-full h-full object-cover"
           />
         </div>
       </div>
-      <ToastContainer position="top-center" autoClose={4000} />
+
     </div>
-  </div>
-   
   );
 }
