@@ -301,7 +301,8 @@ export default function LoginPage() {
     // bank 9–18 digits
     if (!/^\d{9,18}$/.test(bankAccountNumber)) newErrors.bankAccountNumber = true;
     // ifsc 11 alphanum
-    if (!/^[A-Za-z0-9]{11}$/.test(ifscCode)) newErrors.ifscCode = true;
+// 4 letters, then a literal "0", then 6 digits
+if (!/^[A-Za-z]{4}0\d{6}$/.test(ifscCode)) newErrors.ifscCode = true;
     // officer extras…
     if (position === 'officer') {
       if (!/^\d+$/.test(aadharNumber || '')) newErrors.aadharNumber = true;
@@ -351,9 +352,15 @@ function handleSubmit(e) {
   };
 
   return (
+  <div className="flex flex-col items-center py-8 px-4 bg-[#8a1ccf] min-h-screen">
     
-    <div className="min-h-screen bg-gradient-to-br from-[#8a1ccf]/80 to-[#8a1ccf]/60 flex items-center justify-center px-4">
+    
+  {/* ← your new heading */}
+  <h1 className="text-5xl font-extrabold text-white mb-6">Welcome to Yaswa Sales</h1>
+
+   <div className="min-h-screen bg-gradient-to-br from-[#8a1ccf]/80 to-[#8a1ccf]/60 flex items-center justify-center px-4">
             {/* Loading overlay during actual registration/login */}
+            
       {loadingReg && (
         <div className="absolute inset-0 bg-white bg-opacity-90 flex items-center justify-center z-50">
           <div className="text-center">
@@ -502,10 +509,13 @@ Stay consistent. Sell smart. Grow fast.</p>
     Let’s Go
   </button>
 </Modal>
+ 
 
       <div className="bg-white rounded-2xl shadow-xl max-w-4xl w-full flex overflow-hidden">
-        <div className="w-full md:w-1/2 max-h-[90vh] overflow-y-auto p-8">
+  {/* Left half: heading + form */}
+  <div className="w-full md:w-1/2 max-h-[90vh] overflow-y-auto p-8">
         <br />
+         
         
          <ToastContainer />
         <h1 className="text-3xl font-bold text-center text-[#8a1ccf]">
@@ -844,5 +854,7 @@ Stay consistent. Sell smart. Grow fast.</p>
       </div>
       <ToastContainer position="top-center" autoClose={4000} />
     </div>
+  </div>
+   
   );
 }

@@ -38,21 +38,14 @@ export default function HomePage() {
       {/* Enhanced dot-grid background */}
       <div className="absolute inset-0 -z-20 bg-[radial-gradient(circle,#8a1ccf20_1px,transparent_1px)] bg-[length:20px_20px]" />
 
-      {/* Hero Circle */}
-      <div className="pointer-events-none absolute top-0 right-0
-                        w-64 h-64
-                        md:w-96 md:h-96
-                        bg-[#8a1ccf] rounded-full opacity-10
-                        md:transform md:translate-x-1/4 md:-translate-y-1/4
-      " />
+      
 
       <div className="max-w-4xl mx-auto text-center">
         <h1 className="text-4xl font-extrabold text-[#8a1ccf] mb-4">
           Welcome, {name}!
         </h1>
-        <p className="text-gray-600 mb-12">
-          You’re now in the Yaswa Academy portal — sales reports, commissions, documents,
-          training and more are just a click away.
+        <p className="text-gray-600 mb-12 text-2xl">
+          Welcome to Yaswa sales Portal
         </p>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">

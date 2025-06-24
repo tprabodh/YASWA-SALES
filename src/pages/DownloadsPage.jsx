@@ -4,6 +4,7 @@ import React, { useEffect, useState, useRef } from 'react';
 import { saveAs }               from 'file-saver';
 import PizZip                   from 'pizzip';
 import Docxtemplater            from 'docxtemplater';
+
 import { useUserProfile }       from '../hooks/useUserProfile';
 import { db }                   from '../firebase';
 import {
@@ -55,6 +56,7 @@ export default function DownloadsPage() {
   const { profile, loading }      = useUserProfile();
   const [templates, setTemplates] = useState([]);
   const [sel, setSel]             = useState(null);
+    const [downloading, setDownloading] = useState(false);   // ← added
   const [stampConfig]             = useState(STAMP_CONFIG_DEFAULT);
   const canvasRef                 = useRef();
 
@@ -68,8 +70,28 @@ export default function DownloadsPage() {
     })();
   }, []);
 
-  if (loading)  return <p className="p-6 text-center">Loading…</p>;
-  if (!profile) return <p className="p-6 text-red-500">Not authorized.</p>;
+ if ( loading) {
+    return (
+      <div className="fixed inset-0 bg-white flex items-center justify-center z-50">
+        <svg
+          className="w-16 h-16 text-[#8a1ccf] animate-spin"
+          xmlns="http://www.w3.org/2000/svg"
+          fill="none" viewBox="0 0 24 24"
+        >
+          <circle
+            className="opacity-25"
+            cx="12" cy="12" r="10"
+            stroke="currentColor" strokeWidth="4"
+          />
+          <path
+            className="opacity-75"
+            fill="currentColor"
+            d="M4 12a8 8 0 018-8v4l3-3-3-3v4a8 8 0 00-8 8z"
+          />
+        </svg>
+      </div>
+    );
+  }  if (!profile) return <p className="p-6 text-red-500">Not authorized.</p>;
 
   // only show templates this user can download:
   const options = templates.filter(t => {
@@ -92,6 +114,7 @@ export default function DownloadsPage() {
 
   const handleDownload = async () => {
     if (!sel) return;
+    setDownloading(true);   
 
     // IMAGE TEMPLATES
     if (sel.templateType === 'visitingCard' || sel.templateType === 'brochure') {
@@ -134,9 +157,11 @@ export default function DownloadsPage() {
 
         c.toBlob(blob => {
           saveAs(blob, `${sel.templateType}_${profile.companyId}.png`);
+          setDownloading(false);
         });
       };
       img.onerror = () => alert('Failed to load image template.');
+      setDownloading(false);
       return;
     }
 
@@ -240,6 +265,19 @@ export default function DownloadsPage() {
         >
           Download
         </button>
+
+         {downloading && (
+        <div className="fixed inset-0 bg-white flex items-center justify-center z-50">
+          <svg
+            className="w-16 h-16 text-[#8a1ccf] animate-spin"
+            xmlns="http://www.w3.org/2000/svg"
+            fill="none" viewBox="0 0 24 24"
+          >
+            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
+            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4l3-3-3-3v4a8 8 0 00-8 8z"/>
+          </svg>
+        </div>
+      )}
       </div>
     </div>
   );
