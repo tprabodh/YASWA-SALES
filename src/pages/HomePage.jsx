@@ -35,15 +35,16 @@ export default function HomePage() {
 
  return (
     <div className="relative min-h-screen bg-gradient-to-br from-purple-50 to-white py-20 px-4 overflow-hidden">
-      {/* Subtle dot-grid background */}
-      <div className="absolute inset-0 -z-10 bg-[radial-gradient(circle,#8a1ccf20_1px,transparent_1px)] bg-[size:20px_20px]" />
+      {/* Enhanced dot-grid background */}
+      <div className="absolute inset-0 -z-20 bg-[radial-gradient(circle,#8a1ccf20_1px,transparent_1px)] bg-[length:20px_20px]" />
 
       {/* Hero Circle */}
       <div className="pointer-events-none absolute top-0 right-0
-                        md:w-96 md:h-96 w-64 h-64
+                        w-64 h-64
+                        md:w-96 md:h-96
                         bg-[#8a1ccf] rounded-full opacity-10
-                        transform md:translate-x-1/4 md:-translate-y-1/4
-                                  translate-x-0 -translate-y-1/2" />
+                        md:transform md:translate-x-1/4 md:-translate-y-1/4
+      " />
 
       <div className="max-w-4xl mx-auto text-center">
         <h1 className="text-4xl font-extrabold text-[#8a1ccf] mb-4">

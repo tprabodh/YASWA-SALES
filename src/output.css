@@ -944,6 +944,9 @@
     --tw-gradient-to: var(--color-white);
     --tw-gradient-stops: var(--tw-gradient-via-stops, var(--tw-gradient-position), var(--tw-gradient-from) var(--tw-gradient-from-position), var(--tw-gradient-to) var(--tw-gradient-to-position));
   }
+  .bg-\[length\:20px_20px\] {
+    background-size: 20px 20px;
+  }
   .bg-\[size\:20px_20px\] {
     background-size: 20px 20px;
   }
@@ -1666,6 +1669,11 @@
     @media (width >= 48rem) {
       --tw-translate-y: calc(calc(1/4 * 100%) * -1);
       translate: var(--tw-translate-x) var(--tw-translate-y);
+    }
+  }
+  .md\:transform {
+    @media (width >= 48rem) {
+      transform: var(--tw-rotate-x,) var(--tw-rotate-y,) var(--tw-rotate-z,) var(--tw-skew-x,) var(--tw-skew-y,);
     }
   }
   .md\:flex-row {
