@@ -37,7 +37,7 @@ export default function TopBar() {
         <div className="flex justify-between h-16">
           {/* Logo */}
        <div className="flex-shrink-0 flex items-center">
-  <Link to="/profile">
+  <Link to="/home">
     <img
       src={logo}
       alt="Yaswa Sales"
@@ -264,6 +264,14 @@ export default function TopBar() {
 
             
              {/* Everyone sees Profile, Downloads, Bulletin */}
+
+              <NavLink
+              to="/home"
+              onClick={closeMenu}
+              className={({ isActive }) => `px-3 py-1 rounded ${ isActive ? 'bg-[#8a1ccf] text-white' : 'text-gray-700 hover:bg-indigo-100'}`}            >
+              HOME
+            </NavLink>
+
              <NavLink
               to="/downloads"
               className={({ isActive }) =>
@@ -492,6 +500,13 @@ export default function TopBar() {
 
             {/* Everyone */}
              <NavLink
+              to="/home"
+              onClick={closeMenu}
+              className="block text-gray-700 hover:text-blue-600 px-3 py-2 rounded-md text-base font-medium"
+            >
+              HOME
+            </NavLink>
+             <NavLink
               to="/downloads"
               onClick={closeMenu}
               className="block text-gray-700 hover:text-blue-600 px-3 py-2 rounded-md text-base font-medium"
@@ -512,6 +527,7 @@ export default function TopBar() {
             >
               PROFILE
             </NavLink>
+           
 
             {/* Logout */}
             <button

@@ -7,6 +7,7 @@ import { auth, db }                    from '../firebase';
 import {
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
+  fetchSignInMethodsForEmail,
 } from 'firebase/auth';
 import { Link }                        from 'react-router-dom';
 
@@ -26,7 +27,8 @@ import {
 import { toast, ToastContainer }       from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import Modal from 'react-modal';
-
+import Visibility from '@mui/icons-material/Visibility';
+import VisibilityOff from '@mui/icons-material/VisibilityOff';
 
 // Helper: zero‐pad a number to 4 digits (e.g. 1 → "0001", 42 → "0042")
 function zeroPad4(n) {
@@ -178,35 +180,38 @@ async function doActualRegistration({
 
 
 export default function LoginPage() {
-  const [position,           setPosition]           = useState("");
-  const [isNew,              setIsNew]              = useState(false);
-  const [name,               setName]               = useState('');
-  const [email,              setEmail]              = useState('');
-  const [password,           setPassword]           = useState('');
-  const [confirm,            setConfirm]            = useState('');
-  const [error,              setError]              = useState('');
-  const [mobileNumber,       setMobileNumber]       = useState('');
-  const [whatsappNumber,     setWhatsappNumber]     = useState('');
-  const [aadharNumber,       setAadharNumber]       = useState('');
-  const [bankAccountNumber,  setBankAccountNumber]  = useState('');
-  const [ifscCode,           setIfscCode]           = useState('');
-  const [residingState,      setResidingState]      = useState('');
-  // Only for position==="officer":
-  const [designation,        setDesignation]        = useState('');
-  const [associatedWith,     setAssociatedWith]     = useState('');
-  const [teachingSubject,    setTeachingSubject]    = useState('');
-    const { profile, loading: authLoading } = useUserProfile();
+  const { profile, loading: authLoading } = useUserProfile();
+  const navigate = useNavigate();
 
+  // form state
+  const [isNew,             setIsNew]              = useState(false);
+  const [position,          setPosition]           = useState('');
+  const [name,              setName]               = useState('');
+  const [email,             setEmail]              = useState('');
+  const [password,          setPassword]           = useState('');
+  const [confirm,           setConfirm]            = useState('');
+  const [mobileNumber,      setMobileNumber]       = useState('');
+  const [whatsappNumber,    setWhatsappNumber]     = useState('');
+  const [aadharNumber,      setAadharNumber]       = useState('');
+  const [bankAccountNumber, setBankAccountNumber]  = useState('');
+  const [ifscCode,          setIfscCode]           = useState('');
+  const [residingState,     setResidingState]      = useState('');
+  const [designation,       setDesignation]        = useState('');
+  const [associatedWith,    setAssociatedWith]     = useState('');
+  const [teachingSubject,   setTeachingSubject]    = useState('');
 
-  // Track which inputs are invalid (for red‐border highlighting):
-  const [errors, setErrors] = useState({});
-
-  const [showDeclaration, setShowDeclaration] = useState(false);
-  const [showTour,        setShowTour]        = useState(false);
-  const [showWelcome,     setShowWelcome]     = useState(false);
-
-// temporarily hold the “toBeRegistered” form-data so we can trigger it
+  const [errors,            setErrors]             = useState({});
+  const [error,             setError]              = useState('');
   const [pendingRegistration, setPendingRegistration] = useState(null);
+  const [showDeclaration,   setShowDeclaration]    = useState(false);
+  const [showTour,          setShowTour]           = useState(false);
+  const [showWelcome,       setShowWelcome]        = useState(false);
+
+  // new: show/hide password toggles
+  const [showPwd,           setShowPwd]            = useState(false);
+  const [showConfirmPwd,    setShowConfirmPwd]     = useState(false);
+    const [loadingReg, setLoadingReg] = useState(false); // loading overlay
+
 
   // Dropdown options
   const positionOptions = [
@@ -221,7 +226,6 @@ export default function LoginPage() {
     { label: "Business Development Consultant",          value: "bdConsultant",  role: "businessDevelopmentConsultant",  prefix: "BC" },
   ];
 
-  const navigate = useNavigate();
 
   const statesOfIndia = [
     'Andhra Pradesh','Arunachal Pradesh','Assam','Bihar','Chhattisgarh','Goa','Gujarat',
@@ -230,133 +234,110 @@ export default function LoginPage() {
     'Tamil Nadu','Telangana','Tripura','Uttar Pradesh','Uttarakhand','West Bengal'
   ];
 
-  const resetForm = () => {
-    setName('');
-    setEmail('');
-    setPassword('');
-    setConfirm('');
-    setError('');
-    setMobileNumber('');
-    setWhatsappNumber('');
-    setAadharNumber('');
-    setBankAccountNumber('');
-    setIfscCode('');
-    setDesignation('');
-    setAssociatedWith('');
-    setTeachingSubject('');
-    setResidingState('');
-    setPosition('');
-    setErrors({});
+   const resetForm = () => {
+    setName(''); setEmail(''); setPassword(''); setConfirm('');
+    setMobileNumber(''); setWhatsappNumber(''); setAadharNumber('');
+    setBankAccountNumber(''); setIfscCode(''); setResidingState('');
+    setPosition(''); setDesignation(''); setAssociatedWith('');
+    setTeachingSubject(''); setErrors({}); setError('');
   };
 
   // 1️⃣ Login flow
-async function handleLoginAttempt() {
-  setError('');                         // clear any prior error
-  try {
-    // 1) validate email/password presence
+ async function handleLoginAttempt() {
+    setError('');
     if (!email.trim() || !password) {
       setError('Please enter both email and password.');
       return;
     }
-
-    // 2) try to sign in
-    await signInWithEmailAndPassword(auth, email, password);
-
-    // 3) SHOW THE WELCOME MODAL instead of navigating immediately
-    setShowWelcome(true);
-
-  } catch (err) {
-    console.error(err);
-    setError(err.message);
+    try {
+      await signInWithEmailAndPassword(auth, email, password);
+      setShowWelcome(true);
+    } catch (err) {
+      setError(err.message);
+    }
   }
+
+  // 2️⃣ Register flow
+ async function handleRegisterAttempt() {
+    setError('');
+    const trimmedEmail = email.trim();
+    const methods = await fetchSignInMethodsForEmail(auth, trimmedEmail);
+    if (methods.length > 0) {
+  setErrors(prev => ({ ...prev, email: true }));
+  setError('Email already in use. Please try with a new email.');
+  return;
 }
 
-// 2️⃣ Register flow
-async function handleRegisterAttempt() {
-  setError('');
-  const newErrors = {};
+// 0b) Prevent duplicate mobile in Firestore:
+  const mobileSnap = await getDocs(
+      query(collection(db, 'users'), where('mobileNumber', '==', mobileNumber.trim()))
+    );
+    if (!mobileSnap.empty) {
+      setErrors(prev => ({ ...prev, mobileNumber: true }));
+      setError('This mobile number is already in use.');
+      return;
+    }
+        const newErrors = {};
 
-  // 1) Position
-  if (!position) newErrors.position = true;
 
-  // 2) Name / Email / Password / Confirm
-  if (!name.trim())     newErrors.name     = true;
-  if (!email.trim())    newErrors.email    = true;
-  if (!password)        newErrors.password = true;
-  if (!confirm)         newErrors.confirm  = true;
-  if (password && confirm && password !== confirm) {
-    newErrors.password = newErrors.confirm = true;
+    // 1) Position
+    if (!position) newErrors.position = true;
+
+    // 2) Name / Email / Password / Confirm
+    if (!name.trim())       newErrors.name     = true;
+    if (!email.trim())      newErrors.email    = true;
+    if (!password)          newErrors.password = true;
+    if (!confirm)           newErrors.confirm  = true;
+    if (password && confirm && password !== confirm) {
+      newErrors.password = newErrors.confirm = true;
+    }
+    // email format
+    if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      newErrors.email = true;
+    }
+    // mobile & whatsapp 10 digits
+    if (!/^\d{10}$/.test(mobileNumber))   newErrors.mobileNumber   = true;
+    if (!/^\d{10}$/.test(whatsappNumber)) newErrors.whatsappNumber = true;
+    // bank 9–18 digits
+    if (!/^\d{9,18}$/.test(bankAccountNumber)) newErrors.bankAccountNumber = true;
+    // ifsc 11 alphanum
+    if (!/^[A-Za-z0-9]{11}$/.test(ifscCode)) newErrors.ifscCode = true;
+    // officer extras…
+    if (position === 'officer') {
+      if (!/^\d+$/.test(aadharNumber || '')) newErrors.aadharNumber = true;
+      if (!designation)      newErrors.designation    = true;
+      if (!associatedWith)   newErrors.associatedWith = true;
+      if (!teachingSubject)  newErrors.teachingSubject= true;
+      if (!residingState)    newErrors.residingState  = true;
+    }
+
+    
+
+    // bail on validation errors
+     if (Object.keys(newErrors).length > 0) {
+      setErrors(newErrors);
+      setError('Please correct the highlighted fields.');
+      return;
+    }
+
+    // stash for declaration
+     const cfg = positionOptions.find(o => o.value === position) || {};
+    setPendingRegistration({
+      position, name, email: trimmedEmail, password,
+      mobileNumber, whatsappNumber, aadharNumber,
+      bankAccountNumber, ifscCode, residingState,
+      designation, associatedWith, teachingSubject,
+      newRole: cfg.role, prefix: cfg.prefix,
+    });
+    setShowDeclaration(true);
   }
 
-  // 2a) Email format
-  if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-    newErrors.email = true;
-  }
-
-  // 3) Mobile & WhatsApp must each be exactly 10 digits
-  if (!/^\d{10}$/.test(mobileNumber))   newErrors.mobileNumber   = true;
-  if (!/^\d{10}$/.test(whatsappNumber)) newErrors.whatsappNumber = true;
-
-  // 4) Bank account: 9–18 digits
-  if (!/^\d{9,18}$/.test(bankAccountNumber)) newErrors.bankAccountNumber = true;
-
-  // 5) IFSC (usually alphanumeric, 11 chars) – you already require non‑empty,
-  if (!/^[A-Za-z0-9]{11}$/.test(ifscCode)) {
-    newErrors.ifscCode = true;
-  }
-  
-  //    you can optionally validate a pattern here if desired.
-
-  // 6) Officer extras
-  if (position === 'officer') {
-    if (!/^\d+$/.test(aadharNumber || '')) newErrors.aadharNumber = true;
-    if (!designation)      newErrors.designation    = true;
-    if (!associatedWith)   newErrors.associatedWith = true;
-    if (!teachingSubject)  newErrors.teachingSubject= true;
-    if (!residingState)    newErrors.residingState  = true;
-  }
-
-  // Bail on any errors
-  if (Object.keys(newErrors).length > 0) {
-    setErrors(newErrors);
-    setError('Please correct the highlighted fields.');
-    return;
-  }
-
-  // Everything validated → stash for the dialog:
-  const cfg = positionOptions.find(o => o.value === position) || {};
-  setPendingRegistration({
-    position,
-    name,
-    email,
-    password,
-    mobileNumber,
-    whatsappNumber,
-    aadharNumber,
-    bankAccountNumber,
-    ifscCode,
-    residingState,
-    designation,
-    associatedWith,
-    teachingSubject,
-    newRole: cfg.role,
-    prefix:  cfg.prefix,
-  });
-
-  setShowDeclaration(true);
-}
 
 
-
-// 3️⃣ Unified submit handler
 function handleSubmit(e) {
-  e.preventDefault();
-  if (isNew) {
-    handleRegisterAttempt();
-  } else {
-    handleLoginAttempt();
+    e.preventDefault();
+    isNew ? handleRegisterAttempt() : handleLoginAttempt();
   }
-}
 
 
   // Whenever the user blurs the mobile‐number field, if WhatsApp is empty, ask if we should copy it:
@@ -372,6 +353,17 @@ function handleSubmit(e) {
   return (
     
     <div className="min-h-screen bg-gradient-to-br from-[#8a1ccf]/80 to-[#8a1ccf]/60 flex items-center justify-center px-4">
+            {/* Loading overlay during actual registration/login */}
+      {loadingReg && (
+        <div className="absolute inset-0 bg-white bg-opacity-90 flex items-center justify-center z-50">
+          <div className="text-center">
+            <p className="text-lg font-semibold mb-2">
+              Generating your offer letter, Visiting card, Brochure...
+            </p>
+            <div className="loader ease-linear rounded-full border-8 border-t-8 border-gray-200 h-16 w-16 mx-auto" />
+          </div>
+        </div>
+      )}
       <Modal
   isOpen={showDeclaration}
   onRequestClose={() => setShowDeclaration(false)}
@@ -435,19 +427,28 @@ function handleSubmit(e) {
     <p>You're all set to begin.
 Stay consistent. Sell smart. Grow fast.</p>
      </ul>
-  <button
-  onClick={async () => {
-    setShowTour(false);
-    // actually register with the stashed data
-    const newId = await doActualRegistration(pendingRegistration);
-    setPendingRegistration(null);
-    toast.success(`Registration successful! Your Company ID: ${newId}`);
-    setIsNew(false);        // switch back to login view
-  }}
-  className="px-4 py-2 bg-[#8a1ccf] text-white rounded"
->
-  Got it!
-</button>
+   <button
+          onClick={async () => {
+            setShowTour(false);
+            setLoadingReg(true);
+            try {
+              await doActualRegistration(pendingRegistration);
+              await signInWithEmailAndPassword(auth,
+                pendingRegistration.email,
+                pendingRegistration.password
+              );
+              navigate('/home');
+            } catch (err) {
+              setError('Email already in use. Please try with a new email.');
+            } finally {
+              setLoadingReg(false);
+              setPendingRegistration(null);
+            }
+          }}
+          className="px-4 py-2 bg-[#8a1ccf] text-white rounded"
+        >
+          Got it!
+        </button>
 </Modal>
 
 
@@ -494,7 +495,7 @@ Stay consistent. Sell smart. Grow fast.</p>
   <button
     onClick={() => {
       setShowWelcome(false);
-      navigate('/profile');
+      navigate('/home');
     }}
     className="px-4 py-2 bg-[#8a1ccf] text-white rounded hover:bg-indigo-800 "
   >
@@ -715,36 +716,58 @@ Stay consistent. Sell smart. Grow fast.</p>
           )}
 
           {/* Email */}
-          <div>
-            <label className="block text-gray-700">Email</label>
-            <input
-              type="email"
-              value={email}
-              onChange={e => {
-                setEmail(e.target.value);
-                setErrors(prev => ({ ...prev, email: false }));
-              }}
-              className={`mt-1 w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-[#8a1ccf]
-                ${errors.email ? 'border-red-500' : 'border-gray-300'}`}
-              required
-            />
-          </div>
+        <div>
+          <label className="block text-gray-700">Email</label>
+          <input
+            type="email"
+            value={email}
+            onChange={e => {
+              setEmail(e.target.value);
+              setErrors(prev => ({ ...prev, email: false }));
+            }}
+            className={`mt-1 w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-[#8a1ccf]
+              ${errors.email ? 'border-red-500' : 'border-gray-300'}`}
+            required
+          />
+        </div>
 
-          {/* Password */}
-          <div>
-            <label className="block text-gray-700">Password</label>
-            <input
-              type="password"
-              value={password}
-              onChange={e => {
-                setPassword(e.target.value);
-                setErrors(prev => ({ ...prev, password: false }));
-              }}
-              className={`mt-1 w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-[#8a1ccf]
-                ${errors.password ? 'border-red-500' : 'border-gray-300'}`}
-              required
-            />
-          </div>
+{/* Password */}
+<div className="mt-4">
+  <label htmlFor="password" className="block text-gray-700 mb-1">
+    Password
+  </label>
+
+  {/* relative wrapper only around input + icon */}
+  <div className="relative w-full">
+    <input
+      id="password"
+      type={showPwd ? 'text' : 'password'}
+      value={password}
+      onChange={e => {
+        setPassword(e.target.value);
+        setErrors(prev => ({ ...prev, password: false }));
+      }}
+             className={`w-full px-4 py-2 pr-12 border rounded-lg focus:outline-none focus:ring-2 focus:ring-[#8a1ccf] ${errors.password ? 'border-red-500' : 'border-gray-300'}`}
+
+      required
+    />
+
+    {/* icon container */}
+    <div className="absolute inset-y-0 right-0 flex items-center pr-3">
+      <button
+        type="button"
+        onClick={() => setShowPwd(p => !p)}
+        className="focus:outline-none"
+        aria-label={showPwd ? 'Hide password' : 'Show password'}
+      >
+        {showPwd
+          ? <VisibilityOff className="w-5 h-5 text-red-500" />
+          : <Visibility className="w-5 h-5 text-green-500" />
+        }
+      </button>
+    </div>
+  </div>
+</div>
 
           <p className="text-right text-sm">
             {!isNew && (
@@ -754,23 +777,40 @@ Stay consistent. Sell smart. Grow fast.</p>
             )}
           </p>
 
-          {isNew && (
-            <div>
-              <label className="block text-gray-700">Confirm Password</label>
-              <input
-                type="password"
-                value={confirm}
-                onChange={e => {
-                  setConfirm(e.target.value);
-                  setErrors(prev => ({ ...prev, confirm: false }));
-                }}
-                className={`mt-1 w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-[#8a1ccf]
-                  ${errors.confirm ? 'border-red-500' : 'border-gray-300'}`}
-                required
-              />
-            </div>
-          )}
-
+          {/* Confirm Password (only for register) */}
+       {isNew && (
+  <div className="mt-4">
+    <label htmlFor="confirm-password" className="block text-gray-700 mb-1">
+      Confirm Password
+    </label>
+    <div className="relative w-full">
+      <input
+        id="confirm-password"
+        type={showConfirmPwd ? 'text' : 'password'}
+        value={confirm}
+        onChange={e => {
+          setConfirm(e.target.value);
+          setErrors(prev => ({ ...prev, confirm: false }));
+        }}
+        className={`w-full px-4 py-2 pr-12 border rounded-lg focus:outline-none focus:ring-2 focus:ring-[#8a1ccf] ${errors.confirm ? 'border-red-500' : 'border-gray-300'}`}
+        required
+      />
+      <div className="absolute inset-y-0 right-0 flex items-center pr-3">
+        <button
+          type="button"
+          onClick={() => setShowConfirmPwd(p => !p)}
+          className="focus:outline-none"
+          aria-label={showConfirmPwd ? 'Hide password' : 'Show password'}
+        >
+          {showConfirmPwd
+            ? <VisibilityOff className="w-5 h-5 text-red-500" />
+            : <Visibility className="w-5 h-5 text-green-500" />
+          }
+        </button>
+      </div>
+    </div>
+  </div>
+)}
           <button
             type="submit"
             className="w-full mt-4 bg-[#8a1ccf] text-white py-3 rounded-lg shadow hover:bg-[#7a1bbf] transition"

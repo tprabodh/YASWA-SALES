@@ -32,7 +32,7 @@ export default function BulletinPage() {
       const q = query(
         collection(db, 'bulletins'),
         where('roles', 'array-contains-any', [profile.role, 'telecallerGroup']),
-        orderBy('createdAt', 'desc')
+        orderBy('order', 'desc')
       );
       const snap = await getDocs(q);
       const all = snap.docs.map(d => ({ id: d.id, ...d.data() }));
@@ -152,14 +152,7 @@ export default function BulletinPage() {
 
                   {b.contentType === 'document' && (
                     <>
-                      <a
-                        href={b.content}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="px-3 py-1 bg-indigo-500 text-white rounded hover:bg-indigo-600 text-sm"
-                      >
-                        View
-                      </a>
+                      
                       <a
                         href={b.content}
                         download

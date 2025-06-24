@@ -34,6 +34,7 @@ import MyBusinessHeadsPage from './pages/MyBusinessHeadsPage';
 import BDCReportFormPage from './pages/BDCReportFormPage';
 import UploadPDFTemplatePage from './pages/UploadPDFTemplatePage';
 import ManagerSummaryPage from './pages/ManagerSummaryPage';
+import HomePage from './pages/HomePage';
 
 
 
@@ -47,6 +48,7 @@ function App() {
 
         {/* All these routes share the ProtectedLayout */}
           <Route element={<ProtectedLayout />}>
+                 <Route path="home" element={<HomePage />} />
 
           <Route path="submit/:id?" element={<ReportFormPage />} />
           <Route path="/profile" element={<ProfilePage />} />
