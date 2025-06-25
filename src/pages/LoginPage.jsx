@@ -357,7 +357,7 @@ function handleSubmit(e) {
     <div className="flex flex-col items-center justify-center min-h-screen bg-gradient-to-br from-[#8a1ccf] to-[#8a1ccf]/90 py-8 px-4">
 
       {/* Heading: Centered with margin-bottom for spacing. */}
-      <h1 className="text-5xl font-extrabold text-white text-center mb-6">
+      <h1 className="text-3xl font-extrabold text-white text-center mb-6">
         Welcome to Yaswa Sales
       </h1>
 

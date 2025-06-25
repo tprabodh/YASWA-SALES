@@ -42,7 +42,7 @@ export default function HomePage() {
 
       <div className="max-w-4xl mx-auto text-center">
         <h1 className="text-4xl font-extrabold text-[#8a1ccf] mb-4">
-          Welcome, {name}!
+           {name}!
         </h1>
         <p className="text-gray-600 mb-12 text-2xl">
           Welcome to Yaswa sales Portal
