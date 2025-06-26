@@ -9,27 +9,34 @@ export default function HomePage() {
   const name = profile?.name || 'Team Member';
 
    const buttons = [
-    { to: '/submit', label: 'Submit Sales Report', roles: ['employee','associate','manager'] },
-    { to: '/bdc-report', label: 'Submit BDC Sales Report', roles: ['businessDevelopmentConsultant'] },
-    { to: '/reports', label: 'My Sales Reports Status', roles: ['employee','associate','manager','businessDevelopmentConsultant'] },
-    { to: '/payment-history', label: 'Payment History', roles: ['employee','associate','businessDevelopmentConsultant'] },
-    { to: '/profile', label: 'My Profile', roles: ['*'] },
-    { to: '/downloads', label: 'Personal Documents', roles: ['*'] },
-    { to: '/bulletins', label: 'Training Module', roles: ['*'] },
     { to: '/admin', label: 'Admin Panel', roles: ['admin'] },
     { to: '/admin/employee-summary', label: 'Employee Summary', roles: ['admin'] },
     { to: "/bulletins/upload-pdf-template", label: 'Upload Documents', roles: ['admin'] },
     { to: '/employee-management', label: 'Employee Management', roles: ['admin'] },
     { to: '/admin/bulletin-input', label: 'Training Module Input', roles: ['admin'] },
     { to: '/admin/payment-history', label: ' Payment History', roles: ['admin'] },
+
+    { to: '/my-business-heads', label: "Sales Head's View", roles: ['salesHead'] },
+    
+    { to: '/businesshead', label: "Senior Manager's View", roles: ['businessHead'] },
+
+    
     { to: '/telecaller', label: 'Telecaller Dashboard', roles: ['telecaller'] },
     { to: '/forecast', label: 'Monthly Summary', roles: ['telecaller'] },
     { to: '/forecast-input', label: 'Forecast Input', roles: ['telecaller'] },
+
     { to: '/manager', label: "My Team's Sales Reports", roles: ['manager'] },
     { to: '/manager-unpaid-commissions', label: "My Payment History", roles: ['manager'] },
     { to: '/manager-payment-history', label: "My Team's Payment History", roles: ['manager'] },
-    { to: '/businesshead', label: "Senior Manager's View", roles: ['businessHead'] },
-    { to: '/my-business-heads', label: "Sales Head's View", roles: ['salesHead'] },
+    
+     { to: '/submit', label: 'Submit Sales Report', roles: ['employee','associate','manager'] },
+    { to: '/bdc-report', label: 'Submit BDC Sales Report', roles: ['businessDevelopmentConsultant'] },
+    { to: '/reports', label: 'My Sales Reports Status', roles: ['employee','associate','manager','businessDevelopmentConsultant'] },
+    { to: '/payment-history', label: 'Payment History', roles: ['employee','associate','businessDevelopmentConsultant'] },
+
+    { to: '/downloads', label: 'Personal Documents', roles: ['*'] },
+    { to: '/bulletins', label: 'Training Module', roles: ['*'] },
+        { to: '/profile', label: 'My Profile', roles: ['*'] },
   ];
 
 
